@@ -1,6 +1,7 @@
 const YOUTUBE_CHANNEL_ID = "UCswTLX2pZwbRe80PpLDmdpA";
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
-const MAX_RESULTS = 24;
+const PAGE_SIZE = 50;
+const MAX_PAGES = 10;
 
 const jsonHeaders = {
   "content-type": "application/json; charset=UTF-8",
@@ -44,9 +45,8 @@ function buildVideoList(playlistData, statisticsById) {
     video.thumbnail &&
     video.url &&
     video.videoId &&
-    video.liveBroadcastContent === "none" &&
-    getDurationSeconds(video.duration) > 60 &&
-    !video.title.includes("#")
+    !video.title.toLowerCase().includes("live") &&
+    getDurationSeconds(video.duration) > 60
   );
 }
 
@@ -89,31 +89,56 @@ export default {
     }
 
     try {
-      const playlistData = await fetchJson(
-        `${YOUTUBE_API_BASE}/search?part=snippet&channelId=${YOUTUBE_CHANNEL_ID}&maxResults=${MAX_RESULTS}&order=date&type=video&key=${env.YOUTUBE_API_KEY}`
+      const channelData = await fetchJson(
+        `${YOUTUBE_API_BASE}/channels?part=contentDetails&id=${YOUTUBE_CHANNEL_ID}&key=${env.YOUTUBE_API_KEY}`
       );
+      const uploadsPlaylistId = channelData?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 
-      const videoIds = (playlistData.items || [])
-        .map((item) => item?.id?.videoId || item?.snippet?.resourceId?.videoId)
+      if (!uploadsPlaylistId) {
+        throw new Error("uploads_playlist_missing");
+      }
+
+      const allItems = [];
+      let nextPageToken = "";
+
+      for (let pageIndex = 0; pageIndex < MAX_PAGES; pageIndex += 1) {
+        const tokenQuery = nextPageToken ? `&pageToken=${encodeURIComponent(nextPageToken)}` : "";
+        const playlistData = await fetchJson(
+          `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=${PAGE_SIZE}${tokenQuery}&key=${env.YOUTUBE_API_KEY}`
+        );
+
+        allItems.push(...(playlistData.items || []));
+        nextPageToken = playlistData.nextPageToken || "";
+
+        if (!nextPageToken) {
+          break;
+        }
+      }
+
+      const videoIds = allItems
+        .map((item) => item?.snippet?.resourceId?.videoId || item?.id?.videoId)
         .filter(Boolean);
 
       let statisticsById = {};
 
       if (videoIds.length) {
-        const statsData = await fetchJson(
-          `${YOUTUBE_API_BASE}/videos?part=statistics,contentDetails&id=${videoIds.join(",")}&key=${env.YOUTUBE_API_KEY}`
-        );
+        for (let index = 0; index < videoIds.length; index += 50) {
+          const batchIds = videoIds.slice(index, index + 50);
+          const statsData = await fetchJson(
+            `${YOUTUBE_API_BASE}/videos?part=statistics,contentDetails&id=${batchIds.join(",")}&key=${env.YOUTUBE_API_KEY}`
+          );
 
-        statisticsById = (statsData.items || []).reduce((accumulator, item) => {
-          accumulator[item.id] = {
-            ...(item.statistics || {}),
-            duration: item.contentDetails?.duration || ""
-          };
-          return accumulator;
-        }, {});
+          statisticsById = (statsData.items || []).reduce((accumulator, item) => {
+            accumulator[item.id] = {
+              ...(item.statistics || {}),
+              duration: item.contentDetails?.duration || ""
+            };
+            return accumulator;
+          }, statisticsById);
+        }
       }
 
-      const videos = buildVideoList(playlistData, statisticsById);
+      const videos = buildVideoList({ items: allItems }, statisticsById);
 
       return new Response(JSON.stringify({ videos }), {
         headers: {
