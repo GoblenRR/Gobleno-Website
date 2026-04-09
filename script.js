@@ -29,7 +29,7 @@
     applyRoute();
   }
 
-  const discordCard = document.querySelector("[data-discord-card]");
+  const discordCard = document.querySelector("[data-discord-card]") || document.querySelector('[data-route-panel="home"]');
 
   if (!discordCard) return;
 
@@ -67,7 +67,7 @@
     };
 
     avatarEl.src = user.avatar
-      ? `https://api.lanyard.rest/${user.id}.png?v=${encodeURIComponent(user.avatar)}`
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
       : getDefaultAvatarUrl(user);
     activeAvatarKey = avatarKey;
   };
