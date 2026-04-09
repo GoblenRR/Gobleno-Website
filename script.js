@@ -121,16 +121,6 @@
       `);
     });
 
-    if (!panels.length) {
-      panels.push(`
-        <article class="presence-panel presence-placeholder">
-          <p class="presence-kicker">Discord</p>
-          <h2 class="presence-title">No active game or Spotify session</h2>
-          <p class="presence-copy">Presence updates here automatically when something starts.</p>
-        </article>
-      `);
-    }
-
     return panels.join("");
   };
 
@@ -140,13 +130,8 @@
 
     if (!data || !user) {
       statusLabelEl.textContent = "Discord presence is unavailable right now.";
-      presenceStackEl.innerHTML = `
-        <article class="presence-panel presence-placeholder">
-          <p class="presence-kicker">Discord</p>
-          <h2 class="presence-title">Unable to load presence</h2>
-          <p class="presence-copy">Try again in a moment.</p>
-        </article>
-      `;
+      presenceStackEl.innerHTML = "";
+      presenceStackEl.hidden = true;
       return;
     }
 
@@ -159,7 +144,10 @@
     statusBadgeEl.className = `discord-status-badge ${statusMeta.className}`;
     statusBadgeEl.setAttribute("aria-label", statusMeta.label);
     statusBadgeEl.setAttribute("title", statusMeta.label);
-    presenceStackEl.innerHTML = createPresenceMarkup(data);
+
+    const presenceMarkup = createPresenceMarkup(data);
+    presenceStackEl.innerHTML = presenceMarkup;
+    presenceStackEl.hidden = !presenceMarkup.trim();
   };
 
   const loadPresence = async () => {
