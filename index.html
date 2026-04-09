@@ -4,111 +4,186 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gobleno</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260409-2">
-  <script src="script.js?v=20260409-2" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20260409-6">
+  <script src="script.js?v=20260409-6" defer></script>
 </head>
 <body class="page-shell">
-  <div class="bg-blob blob-one"></div>
-  <div class="bg-blob blob-two"></div>
-  <div class="bg-blob blob-three"></div>
+  <div class="bg-shape bg-shape-one"></div>
+  <div class="bg-shape bg-shape-two"></div>
+  <div class="bg-shape bg-shape-three"></div>
+  <div class="bg-glow"></div>
+  <div class="watch-open-overlay" aria-hidden="true">
+    <div class="watch-open-door watch-open-door--left"></div>
+    <div class="watch-open-door watch-open-door--right"></div>
+    <div class="watch-open-core"></div>
+  </div>
 
-  <main class="layout center-layout single-page-layout" data-route-app>
-    <section
-      class="glass-card hero-card floating-card discord-hero-card route-panel"
-      data-discord-card
-      data-route-panel="home"
-      aria-hidden="false"
-    >
-      <div class="glass-highlight"></div>
-      <div class="discord-profile">
-        <div class="discord-avatar-shell">
-          <img
-            class="discord-avatar"
-            data-discord-avatar
-            src="https://cdn.discordapp.com/embed/avatars/1.png"
-            alt="Gobleno Discord avatar"
-          >
-          <span
-            class="discord-status-badge status-offline"
-            data-discord-status-badge
-            aria-label="Offline"
-            title="Offline"
-          ></span>
+  <main class="layout dashboard-layout" data-route-app>
+    <section class="app-shell">
+      <header class="app-topbar">
+        <div class="app-topbar__title">
+          <a class="back-mark" href="#home" data-route-link="home" aria-label="Go to home">
+            <span></span>
+            <span></span>
+          </a>
+          <h1 class="app-title">Gobleno</h1>
         </div>
+      </header>
 
-        <h1 class="discord-display-name" data-discord-name>Gobleno</h1>
-      </div>
-
-      <div class="presence-stack" data-discord-presence hidden></div>
-
-      <nav class="stacked-actions" aria-label="Primary navigation">
-        <a class="glass-button primary-button" href="#links" data-route-link="links">Links</a>
-        <a class="glass-button primary-button" href="#ui" data-route-link="ui">UI Design</a>
-        <a class="glass-button primary-button" href="#placeholder" data-route-link="placeholder">Coming Soon</a>
+      <nav class="app-tabs" aria-label="Primary navigation">
+        <a class="app-tab" href="#home" data-route-link="home" data-tab-for="home">Home</a>
+        <a class="app-tab" href="#links" data-route-link="links" data-tab-for="links">Links</a>
+        <a class="app-tab" href="#ui" data-route-link="ui" data-tab-for="ui">UI Design</a>
+        <a class="app-tab" href="#contact" data-route-link="contact" data-tab-for="contact">Contact</a>
+        <a class="app-tab" href="#placeholder" data-route-link="placeholder" data-tab-for="placeholder">Coming Soon</a>
       </nav>
-    </section>
 
-    <section
-      class="glass-card content-card route-panel"
-      data-route-panel="links"
-      aria-hidden="true"
-      hidden
-    >
-      <div class="glass-highlight"></div>
-      <h1 class="section-title">Links</h1>
+      <section class="app-stage">
+        <section
+          class="route-panel route-screen home-screen"
+          data-discord-card
+          data-route-panel="home"
+          aria-hidden="false"
+        >
+          <div class="home-grid">
+            <aside class="discord-spotlight">
+              <div class="profile-card" data-depth-card>
+                <div class="profile-card__shine"></div>
+                <div class="discord-profile">
+                  <div class="discord-avatar-shell">
+                    <img
+                      class="discord-avatar"
+                      data-discord-avatar
+                      src="https://cdn.discordapp.com/embed/avatars/1.png"
+                      alt="Gobleno Discord avatar"
+                    >
+                    <span
+                      class="discord-status-badge status-offline"
+                      data-discord-status-badge
+                      aria-label="Offline"
+                      title="Offline"
+                    ></span>
+                  </div>
 
-      <div class="link-list">
-        <a class="glass-button link-button" href="https://www.youtube.com/@GoblenoRR" target="_blank" rel="noreferrer">
-          <span class="link-icon youtube-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="img">
-              <path d="M23.1 7.2a3.06 3.06 0 0 0-2.16-2.16C19.02 4.5 12 4.5 12 4.5s-7.02 0-8.94.54A3.06 3.06 0 0 0 .9 7.2 31.5 31.5 0 0 0 .36 12c0 1.62.18 3.22.54 4.8A3.06 3.06 0 0 0 3.06 18.96c1.92.54 8.94.54 8.94.54s7.02 0 8.94-.54a3.06 3.06 0 0 0 2.16-2.16c.36-1.58.54-3.18.54-4.8 0-1.62-.18-3.22-.54-4.8ZM9.75 15.39V8.61L15.78 12l-6.03 3.39Z"/>
-            </svg>
-          </span>
-          <span class="link-meta">
-            <span class="link-label">YouTube</span>
-            <span class="link-url">@GoblenoRR</span>
-          </span>
-        </a>
+                  <h2 class="discord-display-name" data-discord-name>Gobleno</h2>
+                </div>
+              </div>
 
-        <a class="glass-button link-button" href="https://discord.com/invite/WYwjKddwmK" target="_blank" rel="noreferrer">
-          <span class="link-icon discord-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="img">
-              <path d="M20.32 4.37A16.77 16.77 0 0 0 16.2 3.1a11.54 11.54 0 0 0-.53 1.09 15.5 15.5 0 0 0-4.7 0c-.17-.37-.35-.73-.54-1.09a16.68 16.68 0 0 0-4.13 1.28C3.7 8.2 2.83 11.92 3.28 15.6a16.98 16.98 0 0 0 5.06 2.57c.41-.55.77-1.14 1.08-1.76-.59-.23-1.15-.52-1.67-.86.14-.1.28-.21.41-.32 3.22 1.48 6.72 1.48 9.9 0 .14.11.27.22.41.32-.53.34-1.09.63-1.68.86.31.62.67 1.21 1.09 1.76a16.9 16.9 0 0 0 5.06-2.57c.53-4.27-.91-7.95-2.62-11.23ZM9.7 13.3c-.97 0-1.76-.9-1.76-2s.77-2 1.76-2c1 0 1.78.9 1.76 2 0 1.1-.77 2-1.76 2Zm4.6 0c-.97 0-1.76-.9-1.76-2s.77-2 1.76-2c1 0 1.78.9 1.76 2 0 1.1-.76 2-1.76 2Z"/>
-            </svg>
-          </span>
-          <span class="link-meta">
-            <span class="link-label">Discord</span>
-            <span class="link-url">Join the community</span>
-          </span>
-        </a>
-      </div>
+              <div class="presence-stack" data-discord-presence hidden></div>
 
-      <a class="glass-button back-button" href="#home" data-route-link="home">Back</a>
-    </section>
+              <div class="home-actions">
+                <a class="action-button action-button--solid" href="#contact" data-route-link="contact">Contact Me</a>
+              </div>
+            </aside>
+          </div>
 
-    <section
-      class="glass-card content-card route-panel"
-      data-route-panel="ui"
-      aria-hidden="true"
-      hidden
-    >
-      <div class="glass-highlight"></div>
-      <h1 class="section-title">UI Design</h1>
-      <a class="glass-button back-button" href="#home" data-route-link="home">Back</a>
-    </section>
+          <div class="stats-strip">
+            <article class="stat-card stat-card--full" aria-label="Views">
+              <span class="stat-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 64 64" role="img">
+                  <circle cx="22" cy="18" r="10"></circle>
+                  <path d="M10 42c0-8 5.8-14 13-14s13 6 13 14v6H10Z"></path>
+                  <circle cx="44" cy="24" r="8"></circle>
+                  <path d="M34 44c0-6.4 4.8-11 10-11 5.6 0 10 4.6 10 11v4H34Z"></path>
+                </svg>
+              </span>
+              <span class="stat-card__text">
+                <span class="stat-card__value">0</span>
+                <span class="stat-card__label">Page Views</span>
+              </span>
+            </article>
+          </div>
+        </section>
 
-    <section
-      class="glass-card content-card route-panel"
-      data-route-panel="placeholder"
-      aria-hidden="true"
-      hidden
-    >
-      <div class="glass-highlight"></div>
-      <h1 class="section-title">Coming Soon</h1>
-      <a class="glass-button back-button" href="#home" data-route-link="home">Back</a>
+        <section
+          class="route-panel route-screen links-screen"
+          data-route-panel="links"
+          aria-hidden="true"
+          hidden
+        >
+          <div class="panel-heading">
+            <h2 class="panel-title">Links</h2>
+            <p class="panel-subtitle">All the links that I have</p>
+          </div>
+
+          <div class="links-board">
+            <a class="social-card social-card--youtube" href="https://www.youtube.com/@GoblenoRR" target="_blank" rel="noreferrer" data-depth-card>
+              <span class="social-card__icon">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="">
+              </span>
+              <span class="social-card__text">
+                <span class="social-card__title">YouTube</span>
+                <span class="social-card__meta">@GoblenoRR</span>
+              </span>
+            </a>
+
+            <a class="social-card social-card--discord" href="https://discord.com/invite/WYwjKddwmK" target="_blank" rel="noreferrer" data-depth-card>
+              <span class="social-card__icon">
+                <img src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d7f4ef6498ac018f2c55_Symbol.svg" alt="">
+              </span>
+              <span class="social-card__text">
+                <span class="social-card__title">Discord</span>
+                <span class="social-card__meta">Join the community</span>
+              </span>
+            </a>
+          </div>
+        </section>
+
+        <section
+          class="route-panel route-screen ui-screen"
+          data-route-panel="ui"
+          aria-hidden="true"
+          hidden
+        >
+          <div class="panel-heading">
+            <h2 class="panel-title">UI Design</h2>
+          </div>
+
+          <div class="showcase-board">
+            <article class="showcase-block showcase-block--large"></article>
+            <article class="showcase-block showcase-block--small"></article>
+            <article class="showcase-block showcase-block--accent"></article>
+          </div>
+        </section>
+
+        <section
+          class="route-panel route-screen contact-screen"
+          data-route-panel="contact"
+          aria-hidden="true"
+          hidden
+        >
+          <div class="panel-heading">
+            <h2 class="panel-title">Contact</h2>
+          </div>
+        </section>
+
+        <section
+          class="route-panel route-screen placeholder-screen"
+          data-route-panel="placeholder"
+          aria-hidden="true"
+          hidden
+        >
+          <div class="panel-heading">
+            <h2 class="panel-title">Coming Soon</h2>
+          </div>
+
+          <div class="placeholder-board placeholder-board--centered">
+            <div class="discord-illustration discord-illustration--large" aria-hidden="true">
+              <span class="cloud-strip cloud-strip--one"></span>
+              <span class="cloud-strip cloud-strip--two"></span>
+              <span class="cloud-strip cloud-strip--three"></span>
+              <span class="cloud-strip cloud-strip--four"></span>
+              <span class="search-badge">
+                <span class="search-badge__inner">?</span>
+              </span>
+            </div>
+          </div>
+        </section>
+      </section>
     </section>
   </main>
 </body>

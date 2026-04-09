@@ -2,7 +2,7 @@
   const lanyardUserId = "488391678734893066";
   const lanyardSocketEndpoint = "wss://api.lanyard.rest/socket";
   const currentHash = window.location.hash.replace("#", "").trim().toLowerCase();
-  const shouldPlayStartupIntro = !currentHash;
+  const shouldPlayStartupIntro = !currentHash || currentHash === "home";
 
   if (shouldPlayStartupIntro) {
     document.body.classList.add("play-startup-intro");
@@ -12,21 +12,75 @@
 
   if (routeApp) {
     const routePanels = Array.from(routeApp.querySelectorAll("[data-route-panel]"));
+    const routeTabs = Array.from(routeApp.querySelectorAll("[data-tab-for]"));
     const validRoutes = new Set(routePanels.map((panel) => panel.dataset.routePanel));
+
+    const showPanel = (panel) => {
+      panel.hidden = false;
+      panel.setAttribute("aria-hidden", "false");
+    };
+
+    const hidePanel = (panel) => {
+      panel.hidden = true;
+      panel.setAttribute("aria-hidden", "true");
+    };
 
     const applyRoute = () => {
       const requestedRoute = window.location.hash.replace("#", "").trim().toLowerCase() || "home";
-      const activeRoute = validRoutes.has(requestedRoute) ? requestedRoute : "home";
+      const nextRoute = validRoutes.has(requestedRoute) ? requestedRoute : "home";
 
       routePanels.forEach((panel) => {
-        const isActive = panel.dataset.routePanel === activeRoute;
-        panel.hidden = !isActive;
-        panel.setAttribute("aria-hidden", String(!isActive));
+        if (panel.dataset.routePanel === nextRoute) {
+          showPanel(panel);
+          return;
+        }
+
+        hidePanel(panel);
+      });
+
+      routeTabs.forEach((tab) => {
+        tab.classList.toggle("is-active", tab.dataset.tabFor === nextRoute);
       });
     };
 
     window.addEventListener("hashchange", applyRoute);
     applyRoute();
+  }
+
+  const depthCards = Array.from(document.querySelectorAll("[data-depth-card]"));
+
+  if (depthCards.length && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    depthCards.forEach((depthCard) => {
+      const maxTilt = depthCard.classList.contains("social-card") ? 5 : 7;
+      const restingShadow = depthCard.classList.contains("social-card")
+        ? "0 14px 22px rgba(112, 49, 8, 0.22)"
+        : "0 22px 28px rgba(108, 53, 12, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.22)";
+
+      const resetDepthCard = () => {
+        depthCard.style.transform = "perspective(900px) rotateX(0deg) rotateY(0deg) translateY(0)";
+        depthCard.style.boxShadow = restingShadow;
+      };
+
+      depthCard.addEventListener("mousemove", (event) => {
+        const rect = depthCard.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width;
+        const y = (event.clientY - rect.top) / rect.height;
+        const rotateY = (x - 0.5) * maxTilt * 2;
+        const rotateX = (0.5 - y) * maxTilt * 2;
+
+        depthCard.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
+
+        if (depthCard.classList.contains("social-card")) {
+          depthCard.style.boxShadow = `${-rotateY * 1.2}px ${12 + rotateX * 1.1}px 24px rgba(112, 49, 8, 0.28)`;
+          return;
+        }
+
+        depthCard.style.boxShadow = `${-rotateY * 1.6}px ${16 + rotateX * 1.4}px 34px rgba(108, 53, 12, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.24)`;
+      });
+
+      depthCard.addEventListener("mouseleave", resetDepthCard);
+      resetDepthCard();
+    });
   }
 
   const discordCard = document.querySelector("[data-discord-card]") || document.querySelector('[data-route-panel="home"]');
