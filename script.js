@@ -47,6 +47,52 @@
     applyRoute();
   }
 
+  const countUpElements = Array.from(document.querySelectorAll("[data-count-up]"));
+
+  if (countUpElements.length) {
+    const animateCountUp = (element) => {
+      if (element.dataset.countAnimated === "true") return;
+
+      const targetValue = Number((element.dataset.countTarget || element.textContent || "0").replace(/,/g, ""));
+      const duration = Number(element.dataset.countDuration || "1200");
+
+      if (!Number.isFinite(targetValue)) return;
+
+      const startTime = performance.now();
+      const startValue = 0;
+
+      element.dataset.countAnimated = "true";
+
+      const step = (now) => {
+        const progress = Math.min(1, (now - startTime) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const nextValue = Math.round(startValue + (targetValue - startValue) * eased);
+
+        element.textContent = nextValue.toLocaleString();
+
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+
+      window.requestAnimationFrame(step);
+    };
+
+    if ("IntersectionObserver" in window) {
+      const countObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          animateCountUp(entry.target);
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.35 });
+
+      countUpElements.forEach((element) => countObserver.observe(element));
+    } else {
+      countUpElements.forEach(animateCountUp);
+    }
+  }
+
   const depthCards = Array.from(document.querySelectorAll("[data-depth-card]"));
 
   if (depthCards.length && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
