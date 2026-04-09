@@ -53,40 +53,15 @@
     return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
   };
 
-  const getAvatarCandidates = (user) => {
-    if (!user.avatar) {
-      return [getDefaultAvatarUrl(user)];
-    }
-
-    const extension = user.avatar.startsWith("a_") ? "gif" : "png";
-
-    return [
-      `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=256`,
-      `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.webp?size=256`,
-      `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`,
-      getDefaultAvatarUrl(user)
-    ];
-  };
-
   const setAvatarImage = (user) => {
-    const candidates = getAvatarCandidates(user);
-    let currentIndex = 0;
-
-    const applyCandidate = () => {
-      avatarEl.src = candidates[currentIndex];
-    };
-
     avatarEl.onerror = () => {
-      currentIndex += 1;
-      if (currentIndex < candidates.length) {
-        applyCandidate();
-        return;
-      }
-
+      avatarEl.src = getDefaultAvatarUrl(user);
       avatarEl.onerror = null;
     };
 
-    applyCandidate();
+    avatarEl.src = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
+      : getDefaultAvatarUrl(user);
   };
 
   const getDisplayName = (user) => user.display_name || user.global_name || user.username || "Gobleno";
