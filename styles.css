@@ -36,9 +36,52 @@ body {
   overflow-x: hidden;
 }
 
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 154, 84, 0.14), rgba(255, 154, 84, 0) 42%),
+    rgba(8, 4, 1, 0.14);
+  transition: opacity 0.42s ease;
+}
+
+body.is-transitioning::after {
+  opacity: 1;
+}
+
 .page-shell {
   position: relative;
   isolation: isolate;
+}
+
+.page-shell > * {
+  transform-origin: center center;
+  transition:
+    opacity 0.42s ease,
+    transform 0.42s ease,
+    filter 0.42s ease;
+}
+
+body.is-entering .page-shell > * {
+  opacity: 0;
+  transform: scale(0.965) translateY(18px);
+  filter: blur(10px);
+}
+
+body.is-loaded .page-shell > * {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  filter: blur(0);
+}
+
+body.is-transitioning .page-shell > * {
+  opacity: 0;
+  transform: scale(1.035) translateY(-18px);
+  filter: blur(10px) brightness(1.05);
 }
 
 .layout {
@@ -341,5 +384,9 @@ body {
     animation: none !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  body::after {
+    transition: none !important;
   }
 }
