@@ -16,9 +16,35 @@
   <div class="bg-blob blob-three"></div>
 
   <main class="layout center-layout">
-    <section class="glass-card hero-card floating-card">
+    <section class="glass-card hero-card floating-card discord-hero-card" data-discord-card>
       <div class="glass-highlight"></div>
-      <h1 class="brand-title">Gobleno</h1>
+      <div class="discord-profile">
+        <div class="discord-avatar-shell">
+          <img
+            class="discord-avatar"
+            data-discord-avatar
+            src="https://cdn.discordapp.com/embed/avatars/1.png"
+            alt="Gobleno Discord avatar"
+          >
+          <span
+            class="discord-status-badge status-offline"
+            data-discord-status-badge
+            aria-label="Offline"
+            title="Offline"
+          ></span>
+        </div>
+
+        <h1 class="discord-display-name" data-discord-name>Gobleno</h1>
+        <p class="discord-status-line" data-discord-status-label>Loading Discord presence...</p>
+      </div>
+
+      <div class="presence-stack" data-discord-presence>
+        <article class="presence-panel presence-placeholder">
+          <p class="presence-kicker">Discord</p>
+          <h2 class="presence-title">Fetching live status</h2>
+          <p class="presence-copy">Presence, games, and Spotify activity will appear here.</p>
+        </article>
+      </div>
 
       <nav class="stacked-actions" aria-label="Primary navigation">
         <a class="glass-button primary-button" href="links.html">Links</a>
