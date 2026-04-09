@@ -1,56 +1,32 @@
 (() => {
-  const transitionDuration = 420;
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const presenceEndpoint = "https://api.lanyard.rest/v1/users/488391678734893066";
+  const currentHash = window.location.hash.replace("#", "").trim().toLowerCase();
+  const shouldPlayStartupIntro = !currentHash;
 
-  const isInternalPageLink = (link) => {
-    if (!link.href) return false;
-    if (link.target && link.target !== "_self") return false;
-    if (link.hasAttribute("download")) return false;
-
-    const url = new URL(link.href, window.location.href);
-    if (url.origin !== window.location.origin) return false;
-    if (url.pathname === window.location.pathname && (!url.hash || url.hash === window.location.hash)) {
-      return false;
-    }
-
-    return true;
-  };
-
-  const startEntry = () => {
-    document.body.classList.add("is-entering");
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        document.body.classList.add("is-loaded");
-        window.setTimeout(() => {
-          document.body.classList.remove("is-entering");
-        }, transitionDuration);
-      });
-    });
-  };
-
-  if (reducedMotion) {
-    document.body.classList.add("is-loaded");
-  } else {
-    startEntry();
+  if (shouldPlayStartupIntro) {
+    document.body.classList.add("play-startup-intro");
   }
 
-  document.addEventListener("click", (event) => {
-    const link = event.target.closest("a");
-    if (!link || reducedMotion || !isInternalPageLink(link)) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const routeApp = document.querySelector("[data-route-app]");
 
-    event.preventDefault();
-    document.body.classList.add("is-transitioning");
+  if (routeApp) {
+    const routePanels = Array.from(routeApp.querySelectorAll("[data-route-panel]"));
+    const validRoutes = new Set(routePanels.map((panel) => panel.dataset.routePanel));
 
-    window.setTimeout(() => {
-      window.location.href = link.href;
-    }, transitionDuration);
-  });
+    const applyRoute = () => {
+      const requestedRoute = window.location.hash.replace("#", "").trim().toLowerCase() || "home";
+      const activeRoute = validRoutes.has(requestedRoute) ? requestedRoute : "home";
 
-  window.addEventListener("pageshow", () => {
-    document.body.classList.remove("is-transitioning");
-  });
+      routePanels.forEach((panel) => {
+        const isActive = panel.dataset.routePanel === activeRoute;
+        panel.hidden = !isActive;
+        panel.setAttribute("aria-hidden", String(!isActive));
+      });
+    };
+
+    window.addEventListener("hashchange", applyRoute);
+    applyRoute();
+  }
 
   const discordCard = document.querySelector("[data-discord-card]");
 
@@ -68,12 +44,49 @@
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
-  const getAvatarUrl = (user) => {
-    if (user.avatar) {
-      return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`;
+  const getDefaultAvatarUrl = (user) => {
+    const hasModernUsername = user.discriminator === "0";
+    const fallbackIndex = hasModernUsername
+      ? Number((BigInt(user.id) >> 22n) % 6n)
+      : Number(user.discriminator) % 5;
+
+    return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
+  };
+
+  const getAvatarCandidates = (user) => {
+    if (!user.avatar) {
+      return [getDefaultAvatarUrl(user)];
     }
 
-    return `https://cdn.discordapp.com/embed/avatars/${Number(user.id) % 5}.png`;
+    const extension = user.avatar.startsWith("a_") ? "gif" : "png";
+
+    return [
+      `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=256`,
+      `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.webp?size=256`,
+      `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`,
+      getDefaultAvatarUrl(user)
+    ];
+  };
+
+  const setAvatarImage = (user) => {
+    const candidates = getAvatarCandidates(user);
+    let currentIndex = 0;
+
+    const applyCandidate = () => {
+      avatarEl.src = candidates[currentIndex];
+    };
+
+    avatarEl.onerror = () => {
+      currentIndex += 1;
+      if (currentIndex < candidates.length) {
+        applyCandidate();
+        return;
+      }
+
+      avatarEl.onerror = null;
+    };
+
+    applyCandidate();
   };
 
   const getDisplayName = (user) => user.display_name || user.global_name || user.username || "Gobleno";
@@ -135,7 +148,7 @@
 
     const statusMeta = getStatusMeta(data.discord_status);
 
-    avatarEl.src = getAvatarUrl(user);
+    setAvatarImage(user);
     avatarEl.alt = `${getDisplayName(user)} Discord avatar`;
     nameEl.textContent = getDisplayName(user);
     statusBadgeEl.className = `discord-status-badge ${statusMeta.className}`;

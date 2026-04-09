@@ -14,6 +14,8 @@
   --radius-xl: 24px;
   --radius-lg: 20px;
   --radius-pill: 999px;
+  --card-width: 600px;
+  --card-min-height: 420px;
 }
 
 * {
@@ -36,52 +38,24 @@ body {
   overflow-x: hidden;
 }
 
-body::after {
+body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 30;
   pointer-events: none;
+  background: #000;
   opacity: 0;
-  background:
-    radial-gradient(circle at 50% 38%, rgba(255, 154, 84, 0.14), rgba(255, 154, 84, 0) 42%),
-    rgba(8, 4, 1, 0.14);
-  transition: opacity 0.42s ease;
 }
 
-body.is-transitioning::after {
+body.play-startup-intro::before {
   opacity: 1;
+  animation: startupFade 1s ease forwards;
 }
 
 .page-shell {
   position: relative;
   isolation: isolate;
-}
-
-.page-shell > * {
-  transform-origin: center center;
-  transition:
-    opacity 0.42s ease,
-    transform 0.42s ease,
-    filter 0.42s ease;
-}
-
-body.is-entering .page-shell > * {
-  opacity: 0;
-  transform: scale(0.965) translateY(18px);
-  filter: blur(10px);
-}
-
-body.is-loaded .page-shell > * {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-  filter: blur(0);
-}
-
-body.is-transitioning .page-shell > * {
-  opacity: 0;
-  transform: scale(1.035) translateY(-18px);
-  filter: blur(10px) brightness(1.05);
 }
 
 .layout {
@@ -97,9 +71,14 @@ body.is-transitioning .page-shell > * {
   justify-content: center;
 }
 
+.single-page-layout {
+  width: 100%;
+}
+
 .glass-card {
   position: relative;
-  width: min(100%, 620px);
+  width: min(100%, var(--card-width));
+  min-height: var(--card-min-height);
   padding: 34px;
   border-radius: var(--radius-xl);
   border: 1px solid var(--glass-stroke);
@@ -110,19 +89,20 @@ body.is-transitioning .page-shell > * {
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.route-panel[hidden] {
+  display: none;
 }
 
 .hero-card {
   text-align: center;
-  max-width: 560px;
-}
-
-.discord-hero-card {
-  max-width: 600px;
 }
 
 .content-card {
-  max-width: 640px;
+  text-align: center;
 }
 
 .glass-highlight {
@@ -240,6 +220,7 @@ body.is-transitioning .page-shell > * {
   height: 28px;
   border-radius: 50%;
   border: 4px solid rgba(43, 18, 4, 0.95);
+  background: rgba(43, 18, 4, 0.95);
   overflow: hidden;
   box-shadow:
     0 8px 18px rgba(0, 0, 0, 0.28),
@@ -251,7 +232,6 @@ body.is-transitioning .page-shell > * {
 }
 
 .status-offline {
-  background: transparent;
   border-color: rgba(43, 18, 4, 0.95);
 }
 
@@ -265,20 +245,29 @@ body.is-transitioning .page-shell > * {
 }
 
 .status-idle {
-  background: transparent;
+  background: rgba(43, 18, 4, 0.95);
 }
 
 .status-idle::before {
   content: "";
   position: absolute;
   top: 4px;
-  left: 3px;
+  left: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f0b232;
+}
+
+.status-idle::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 10px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: transparent;
-  box-shadow: 5px 0 0 4px #f0b232;
-  transform: rotate(-18deg);
+  background: rgba(43, 18, 4, 0.95);
 }
 
 .discord-display-name {
@@ -296,6 +285,19 @@ body.is-transitioning .page-shell > * {
   gap: 12px;
   margin-top: 24px;
   text-align: left;
+}
+
+.presence-stack[hidden] {
+  display: none;
+}
+
+.discord-hero-card .presence-stack[hidden] + .stacked-actions {
+  margin-top: 16px;
+}
+
+.content-card .back-button {
+  margin-top: auto;
+  align-self: center;
 }
 
 .presence-panel {
@@ -522,6 +524,16 @@ body.is-transitioning .page-shell > * {
   }
 }
 
+@keyframes startupFade {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .layout {
     padding: 20px 16px;
@@ -529,6 +541,7 @@ body.is-transitioning .page-shell > * {
 
   .glass-card {
     padding: 26px 20px;
+    min-height: 360px;
   }
 
   .brand-title {
@@ -559,5 +572,10 @@ body.is-transitioning .page-shell > * {
 
   body::after {
     transition: none !important;
+  }
+
+  body::before {
+    animation: none !important;
+    opacity: 0 !important;
   }
 }
