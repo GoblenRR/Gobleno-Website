@@ -94,6 +94,8 @@
   let activeAvatarKey = "";
   let heartbeatTimer = null;
   let reconnectTimer = null;
+  let presenceTicker = null;
+  let latestPresenceData = null;
 
   const escapeHtml = (value) => String(value)
     .replace(/&/g, "&amp;")
@@ -139,6 +141,58 @@
     }
   };
 
+  const getDiscordActivityAssetUrl = (activity, assetKey) => {
+    if (!activity || !activity.assets || !activity.assets[assetKey]) return "";
+
+    const asset = String(activity.assets[assetKey]).trim();
+    if (!asset) return "";
+
+    if (asset.indexOf("mp:") === 0) {
+      return `https://media.discordapp.net/${asset.slice(3)}`;
+    }
+
+    if (!activity.application_id) return "";
+    return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${asset}.png`;
+  };
+
+  const formatDuration = (milliseconds) => {
+    if (!milliseconds || milliseconds < 0) return "";
+
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const getTimestampMarkup = (timestamps, fallbackStart) => {
+    const startTime = timestamps && timestamps.start
+      ? timestamps.start
+      : fallbackStart;
+
+    if (!startTime) return "";
+
+    const now = Date.now();
+    const elapsed = Math.max(0, now - startTime);
+    const elapsedLabel = formatDuration(elapsed);
+
+    if (!elapsedLabel) return "";
+
+    if (timestamps && timestamps.end && timestamps.end > startTime) {
+      const totalLabel = formatDuration(timestamps.end - startTime);
+      return totalLabel
+        ? `<p class="presence-timestamp">${escapeHtml(elapsedLabel)} / ${escapeHtml(totalLabel)}</p>`
+        : `<p class="presence-timestamp">${escapeHtml(elapsedLabel)}</p>`;
+    }
+
+    return `<p class="presence-timestamp">${escapeHtml(elapsedLabel)} elapsed</p>`;
+  };
+
   const createPresenceMarkup = (data) => {
     const panels = [];
     const gameActivities = (data.activities || []).filter((activity) => activity.type === 0);
@@ -147,25 +201,39 @@
       const artists = Array.isArray(data.spotify.artist)
         ? data.spotify.artist.join(", ")
         : data.spotify.artist;
+      const spotifyArt = data.spotify.album_art_url
+        ? (String(data.spotify.album_art_url).indexOf("http") === 0
+          ? String(data.spotify.album_art_url)
+          : `https://i.scdn.co/image/${data.spotify.album_art_url}`)
+        : "";
 
       panels.push(`
         <article class="presence-panel spotify-panel">
-          <p class="presence-kicker">Spotify</p>
-          <h2 class="presence-title">${escapeHtml(data.spotify.song || "Listening now")}</h2>
-          ${artists ? `<p class="presence-copy">${escapeHtml(artists)}</p>` : ""}
-          ${data.spotify.album ? `<p class="presence-copy">${escapeHtml(data.spotify.album)}</p>` : ""}
+          ${spotifyArt ? `<div class="presence-media"><img class="presence-image" src="${escapeHtml(spotifyArt)}" alt="${escapeHtml(data.spotify.album || data.spotify.song || "Spotify artwork")}"></div>` : ""}
+          <div class="presence-body">
+            <p class="presence-kicker">Listening To</p>
+            <h2 class="presence-title">${escapeHtml(data.spotify.song || "Listening now")}</h2>
+            ${artists ? `<p class="presence-copy">${escapeHtml(artists)}</p>` : ""}
+            ${data.spotify.album ? `<p class="presence-copy">${escapeHtml(data.spotify.album)}</p>` : ""}
+            ${getTimestampMarkup(data.spotify.timestamps, null)}
+          </div>
         </article>
       `);
     }
 
     gameActivities.forEach((activity) => {
       const lines = [activity.details, activity.state].filter(Boolean);
+      const activityArt = getDiscordActivityAssetUrl(activity, "large_image");
 
       panels.push(`
         <article class="presence-panel game-panel">
-          <p class="presence-kicker">Currently Playing</p>
-          <h2 class="presence-title">${escapeHtml(activity.name || "Active now")}</h2>
-          ${lines.map((line) => `<p class="presence-copy">${escapeHtml(line)}</p>`).join("")}
+          ${activityArt ? `<div class="presence-media"><img class="presence-image" src="${escapeHtml(activityArt)}" alt="${escapeHtml(activity.name || "Activity artwork")}"></div>` : ""}
+          <div class="presence-body">
+            <p class="presence-kicker">Currently Playing</p>
+            <h2 class="presence-title">${escapeHtml(activity.name || "Active now")}</h2>
+            ${lines.map((line) => `<p class="presence-copy">${escapeHtml(line)}</p>`).join("")}
+            ${getTimestampMarkup(activity.timestamps, activity.created_at)}
+          </div>
         </article>
       `);
     });
@@ -176,6 +244,7 @@
   const renderPresence = (payload) => {
     const data = payload && payload.data ? payload.data : null;
     const user = data && data.discord_user ? data.discord_user : null;
+    latestPresenceData = data;
 
     if (!data || !user) {
       presenceStackEl.innerHTML = "";
@@ -201,6 +270,15 @@
     if (!heartbeatTimer) return;
     window.clearInterval(heartbeatTimer);
     heartbeatTimer = null;
+  };
+
+  const ensurePresenceTicker = () => {
+    if (presenceTicker) return;
+
+    presenceTicker = window.setInterval(() => {
+      if (!latestPresenceData) return;
+      renderPresence({ data: latestPresenceData });
+    }, 1000);
   };
 
   const connectPresenceSocket = () => {
@@ -259,5 +337,6 @@
     });
   };
 
+  ensurePresenceTicker();
   connectPresenceSocket();
 })();

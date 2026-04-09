@@ -1,3 +1,17 @@
+@font-face {
+  font-family: "Fredoka One Local";
+  src: url("./fonts/FredokaOne-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Roboto Local";
+  src: url("./fonts/Roboto-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
 :root {
   --bg-deep: #88440d;
   --bg-mid: #d97f1d;
@@ -44,7 +58,7 @@ body {
 }
 
 body {
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: "Roboto Local", Arial, sans-serif;
   color: var(--text-dark);
   background:
     linear-gradient(145deg, rgba(255, 240, 200, 0.12), rgba(255, 255, 255, 0) 28%),
@@ -273,10 +287,11 @@ body.play-startup-intro .app-shell {
 
 .app-title {
   margin: 0;
+  font-family: "Fredoka One Local", cursive;
   font-size: clamp(2rem, 3vw, 2.5rem);
   line-height: 1;
   color: #fff;
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .app-tabs {
@@ -446,10 +461,10 @@ body.play-startup-intro .app-shell {
   border: 5px solid #3d3f74;
   background: radial-gradient(circle at 32% 30%, #8cc4ee 0%, #6ca4d4 100%);
   color: #2d2b4a;
-  font-family: "Baloo 2", cursive;
+  font-family: "Fredoka One Local", cursive;
   font-size: 4.8rem;
   line-height: 1;
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .discord-illustration--large {
@@ -530,10 +545,10 @@ body.play-startup-intro .app-shell {
 .discord-display-name,
 .panel-title {
   margin: 0;
-  font-family: "Baloo 2", cursive;
+  font-family: "Fredoka One Local", cursive;
   font-size: clamp(2rem, 3.4vw, 2.7rem);
   line-height: 0.95;
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .presence-stack {
@@ -547,11 +562,37 @@ body.play-startup-intro .app-shell {
 }
 
 .presence-panel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
   border-radius: 18px;
   border: 3px solid #ff7020;
   background: linear-gradient(180deg, rgba(255, 163, 85, 0.18), rgba(255, 255, 255, 0.34));
   padding: 12px 14px;
   box-shadow: var(--shadow-soft);
+}
+
+.presence-media {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.28);
+  border: 2px solid rgba(255, 110, 24, 0.42);
+  box-shadow: 0 8px 14px rgba(112, 49, 8, 0.18);
+  flex-shrink: 0;
+}
+
+.presence-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.presence-body {
+  min-width: 0;
 }
 
 .presence-kicker {
@@ -573,6 +614,12 @@ body.play-startup-intro .app-shell {
   margin: 6px 0 0;
   font-size: 0.95rem;
   color: #473e35;
+}
+
+.presence-timestamp {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  color: #8a5a31;
 }
 
 .stats-strip {
@@ -627,8 +674,9 @@ body.play-startup-intro .app-shell {
 }
 
 .stat-card__value {
+  font-family: "Fredoka One Local", cursive;
   font-size: 2.25rem;
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .stat-card__label {
@@ -689,8 +737,11 @@ body.play-startup-intro .app-shell {
 }
 
 .links-board {
-  display: grid;
-  gap: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 28px 32px;
   max-width: 780px;
 }
 
@@ -715,27 +766,61 @@ body.play-startup-intro .app-shell {
 }
 
 .social-card {
-  display: flex;
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 18px;
-  padding: 18px 22px;
-  border-radius: 22px;
-  border: 3px solid #ff5f13;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 189, 120, 0.26));
+  gap: 12px;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  background: transparent !important;
   text-decoration: none;
   color: inherit;
-  box-shadow: var(--shadow-soft);
+  box-shadow: none !important;
   transform-style: preserve-3d;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease;
+}
+
+.social-card__tile {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  padding: 2px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.22)) padding-box,
+    linear-gradient(135deg, #ffb24d 0%, #ff7a00 52%, #ff4b0d 100%) border-box;
+  box-shadow:
+    0 14px 22px rgba(112, 49, 8, 0.16),
+    inset 0 -2px 0 rgba(218, 186, 140, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 2px solid transparent;
+}
+
+.social-card__tile::before {
+  content: "";
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  display: block;
+  background: linear-gradient(180deg, #fffdf7 0%, #f3e6c9 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .social-card__icon {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: absolute;
+  transform: translateZ(12px);
 }
 
 .social-card__icon img {
@@ -745,22 +830,16 @@ body.play-startup-intro .app-shell {
   display: block;
 }
 
-.social-card__text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transform: translateZ(12px);
+.social-card--discord .social-card__icon img {
+  filter: brightness(0) saturate(100%) invert(52%) sepia(88%) saturate(2375%) hue-rotate(2deg) brightness(103%) contrast(104%);
 }
 
 .social-card__title {
-  font-size: 1.12rem;
-  font-weight: 800;
-}
-
-.social-card__meta {
-  font-size: 0.95rem;
-  color: #65564a;
-  font-weight: 600;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  transform: translateZ(12px);
 }
 
 .showcase-board,
