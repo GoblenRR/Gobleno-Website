@@ -769,6 +769,7 @@ body.play-startup-intro .app-shell {
 }
 
 .links-screen,
+.videos-screen,
 .ui-screen,
 .contact-screen,
 .placeholder-screen {
@@ -778,10 +779,12 @@ body.play-startup-intro .app-shell {
 }
 
 .links-screen .panel-heading,
+.videos-screen .panel-heading,
 .ui-screen .panel-heading,
 .contact-screen .panel-heading,
 .placeholder-screen .panel-heading,
 .links-screen .links-board,
+.videos-screen .videos-board,
 .ui-screen .showcase-board,
 .contact-screen .contact-board,
 .placeholder-screen .placeholder-board {
@@ -863,6 +866,57 @@ body.play-startup-intro .app-shell {
   line-height: 1;
   text-align: center;
   transform: translateZ(12px);
+}
+
+.videos-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px 24px;
+  align-items: start;
+}
+
+.videos-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 1rem;
+  color: #6b5847;
+}
+
+.video-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.video-card__thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.22)) padding-box,
+    linear-gradient(135deg, #ffb24d 0%, #ff7a00 52%, #ff4b0d 100%) border-box;
+  border: 2px solid transparent;
+  box-shadow: 0 14px 22px rgba(112, 49, 8, 0.18);
+}
+
+.video-card__thumb img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.video-card__title {
+  font-size: 0.98rem;
+  line-height: 1.2;
+  color: #231d19;
+}
+
+.video-card__meta {
+  font-size: 0.84rem;
+  color: #7b624f;
 }
 
 .showcase-board,
@@ -973,6 +1027,10 @@ body.play-startup-intro .app-shell {
     grid-template-columns: 1fr;
   }
 
+  .videos-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .showcase-block--large {
     grid-row: auto;
     min-height: 260px;
@@ -1024,6 +1082,10 @@ body.play-startup-intro .app-shell {
   .discord-avatar-shell {
     width: 96px;
     height: 96px;
+  }
+
+  .videos-board {
+    grid-template-columns: 1fr;
   }
 }
 

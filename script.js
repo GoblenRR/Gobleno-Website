@@ -1,6 +1,9 @@
 (() => {
   const lanyardUserId = "488391678734893066";
   const lanyardSocketEndpoint = "wss://api.lanyard.rest/socket";
+  const videosApiUrl = window.location.protocol === "file:"
+    ? "https://gobleno.co.uk/api/videos"
+    : "/api/videos";
   const currentHash = window.location.hash.replace("#", "").trim().toLowerCase();
   const shouldPlayStartupIntro = !currentHash || currentHash === "home";
 
@@ -9,6 +12,10 @@
   }
 
   const routeApp = document.querySelector("[data-route-app]");
+  const videosBoard = document.querySelector("[data-videos-board]");
+  const videosStatus = document.querySelector("[data-videos-status]");
+  let videosLoaded = false;
+  let videosLoading = false;
 
   if (routeApp) {
     const routePanels = Array.from(routeApp.querySelectorAll("[data-route-panel]"));
@@ -41,26 +48,118 @@
       routeTabs.forEach((tab) => {
         tab.classList.toggle("is-active", tab.dataset.tabFor === nextRoute);
       });
+
+      if (nextRoute === "videos") {
+        loadVideos();
+      }
     };
 
     window.addEventListener("hashchange", applyRoute);
     applyRoute();
   }
 
+  const escapeHtml = (value) => String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+  const renderVideos = (videos) => {
+    if (!videosBoard || !videosStatus) return;
+
+    if (!videos.length) {
+      videosStatus.textContent = "No videos found.";
+      videosStatus.hidden = false;
+      return;
+    }
+
+    videosStatus.hidden = true;
+    videosBoard.innerHTML = videos.map((video) => `
+      <a class="video-card" href="${escapeHtml(video.url)}" target="_blank" rel="noreferrer">
+        <span class="video-card__thumb">
+          <img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)} thumbnail" loading="lazy">
+        </span>
+        <span class="video-card__title">${escapeHtml(video.title)}</span>
+        <span class="video-card__meta">${escapeHtml(Number(video.viewCount || 0).toLocaleString())} views</span>
+      </a>
+    `).join("");
+  };
+
+  async function loadVideos() {
+    if (!videosBoard || !videosStatus || videosLoaded || videosLoading) return;
+
+    videosLoading = true;
+    videosStatus.hidden = false;
+    videosStatus.textContent = "Loading videos...";
+
+    try {
+      const response = await fetch(videosApiUrl, { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error(`videos_request_failed:${response.status}`);
+      }
+
+      const payload = await response.json();
+      const videos = Array.isArray(payload?.videos) ? payload.videos : [];
+
+      videosLoaded = true;
+      renderVideos(videos);
+    } catch (_error) {
+      videosStatus.textContent = "Unable to load videos right now.";
+      videosStatus.hidden = false;
+    } finally {
+      videosLoading = false;
+    }
+  }
+
   const hoverTargets = Array.from(document.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark"));
 
   if (hoverTargets.length) {
     const hoverAudio = new Audio("./hover-ui.mp3");
-    const pressAudio = new Audio("./button-up.mp3");
-    const releaseAudio = new Audio("./button-down.mp3");
+    const pressAudio = new Audio("./button-down.mp3");
+    const releaseAudio = new Audio("./button-up.mp3");
+    let audioUnlocked = false;
     hoverAudio.preload = "auto";
-    hoverAudio.volume = 0.5;
+    hoverAudio.volume = 1;
     pressAudio.preload = "auto";
-    pressAudio.volume = 0.18;
+    pressAudio.volume = 1;
     releaseAudio.preload = "auto";
-    releaseAudio.volume = 0.18;
+    releaseAudio.volume = 1;
+
+    const unlockAudio = () => {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+
+      [hoverAudio, pressAudio, releaseAudio].forEach((audio) => {
+        try {
+          const previousVolume = audio.volume;
+          audio.volume = 0;
+          const playback = audio.play();
+
+          if (playback && typeof playback.then === "function") {
+            playback.then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.volume = previousVolume;
+            }).catch(() => {
+              audio.volume = previousVolume;
+              audioUnlocked = false;
+            });
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = previousVolume;
+          }
+        } catch (_error) {
+          audioUnlocked = false;
+        }
+      });
+    };
 
     const playUiSound = (audio) => {
+      if (!audioUnlocked) return;
+
       try {
         audio.pause();
         audio.currentTime = 0;
@@ -73,6 +172,10 @@
         // Ignore autoplay/interaction failures.
       }
     };
+
+    window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+    window.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
 
     hoverTargets.forEach((target) => {
       let armed = true;
@@ -238,13 +341,6 @@
   let reconnectTimer = null;
   let presenceTicker = null;
   let latestPresenceData = null;
-
-  const escapeHtml = (value) => String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 
   const getDefaultAvatarUrl = (user) => {
     const hasModernUsername = user.discriminator === "0";

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gobleno</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="styles.css?v=20260409-19">
+  <link rel="stylesheet" href="styles.css?v=20260409-24">
   <!-- Cloudflare Web Analytics -->
   <script
     defer
@@ -13,7 +13,7 @@
     data-cf-beacon='{"token":"49d5712aa2464770892adfdadf1d8731"}'
   ></script>
   <!-- End Cloudflare Web Analytics -->
-  <script src="script.js?v=20260409-19" defer></script>
+  <script src="script.js?v=20260409-24" defer></script>
 </head>
 <body class="page-shell">
   <div class="bg-shape bg-shape-one"></div>
@@ -42,6 +42,7 @@
       <nav class="app-tabs" aria-label="Primary navigation">
         <a class="app-tab" href="#home" data-route-link="home" data-tab-for="home">Home</a>
         <a class="app-tab" href="#links" data-route-link="links" data-tab-for="links">Links</a>
+        <a class="app-tab" href="#videos" data-route-link="videos" data-tab-for="videos">Videos</a>
         <a class="app-tab" href="#ui" data-route-link="ui" data-tab-for="ui">UI Design</a>
         <a class="app-tab" href="#contact" data-route-link="contact" data-tab-for="contact">Contact</a>
         <a class="app-tab" href="#placeholder" data-route-link="placeholder" data-tab-for="placeholder">Coming Soon</a>
@@ -150,6 +151,21 @@
             <article class="showcase-block showcase-block--large"></article>
             <article class="showcase-block showcase-block--small"></article>
             <article class="showcase-block showcase-block--accent"></article>
+          </div>
+        </section>
+
+        <section
+          class="route-panel route-screen videos-screen"
+          data-route-panel="videos"
+          aria-hidden="true"
+          hidden
+        >
+          <div class="panel-heading">
+            <h2 class="panel-title">Videos</h2>
+          </div>
+
+          <div class="videos-board" data-videos-board>
+            <p class="videos-status" data-videos-status>Loading videos...</p>
           </div>
         </section>
 
