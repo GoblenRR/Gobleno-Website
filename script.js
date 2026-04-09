@@ -47,6 +47,102 @@
     applyRoute();
   }
 
+  const hoverTargets = Array.from(document.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark"));
+
+  if (hoverTargets.length) {
+    const hoverAudio = new Audio("./hover-ui.mp3");
+    const pressAudio = new Audio("./button-up.mp3");
+    const releaseAudio = new Audio("./button-down.mp3");
+    hoverAudio.preload = "auto";
+    hoverAudio.volume = 0.5;
+    pressAudio.preload = "auto";
+    pressAudio.volume = 0.18;
+    releaseAudio.preload = "auto";
+    releaseAudio.volume = 0.18;
+
+    const playUiSound = (audio) => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        const playback = audio.play();
+
+        if (playback && typeof playback.catch === "function") {
+          playback.catch(() => {});
+        }
+      } catch (_error) {
+        // Ignore autoplay/interaction failures.
+      }
+    };
+
+    hoverTargets.forEach((target) => {
+      let armed = true;
+
+      target.addEventListener("pointerenter", () => {
+        if (!armed) return;
+        armed = false;
+        playUiSound(hoverAudio);
+      });
+
+      target.addEventListener("pointerleave", () => {
+        armed = true;
+      });
+
+      target.addEventListener("focus", () => {
+        playUiSound(hoverAudio);
+      });
+
+      target.addEventListener("pointerdown", () => {
+        playUiSound(pressAudio);
+      });
+
+      target.addEventListener("pointerup", () => {
+        playUiSound(releaseAudio);
+      });
+
+      target.addEventListener("pointercancel", () => {
+        playUiSound(releaseAudio);
+      });
+
+      target.addEventListener("keyup", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          playUiSound(releaseAudio);
+        }
+      });
+    });
+  }
+
+  const sparkLayer = document.querySelector("[data-click-spark-layer]");
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (sparkLayer && !prefersReducedMotion) {
+    const sparkCount = 10;
+    const sparkRadius = 30;
+
+    const spawnClickSparks = (clientX, clientY) => {
+      for (let index = 0; index < sparkCount; index += 1) {
+        const spark = document.createElement("span");
+        const angle = `${(360 / sparkCount) * index}deg`;
+        const jitter = (Math.random() - 0.5) * 10;
+        const radius = `${sparkRadius + jitter}px`;
+
+        spark.className = "click-spark";
+        spark.style.left = `${clientX}px`;
+        spark.style.top = `${clientY}px`;
+        spark.style.setProperty("--spark-angle", angle);
+        spark.style.setProperty("--spark-radius", radius);
+        sparkLayer.appendChild(spark);
+
+        window.setTimeout(() => {
+          spark.remove();
+        }, 560);
+      }
+    };
+
+    window.addEventListener("pointerdown", (event) => {
+      spawnClickSparks(event.clientX, event.clientY);
+    }, { passive: true });
+  }
+
   const countUpElements = Array.from(document.querySelectorAll("[data-count-up]"));
 
   if (countUpElements.length) {
@@ -95,7 +191,7 @@
 
   const depthCards = Array.from(document.querySelectorAll("[data-depth-card]"));
 
-  if (depthCards.length && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (depthCards.length && !prefersReducedMotion) {
     depthCards.forEach((depthCard) => {
       const maxTilt = depthCard.classList.contains("social-card") ? 5 : 7;
       const restingShadow = depthCard.classList.contains("social-card")
