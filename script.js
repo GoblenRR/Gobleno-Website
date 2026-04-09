@@ -58,7 +58,6 @@
 
   const avatarEl = discordCard.querySelector("[data-discord-avatar]");
   const nameEl = discordCard.querySelector("[data-discord-name]");
-  const statusLabelEl = discordCard.querySelector("[data-discord-status-label]");
   const statusBadgeEl = discordCard.querySelector("[data-discord-status-badge]");
   const presenceStackEl = discordCard.querySelector("[data-discord-presence]");
 
@@ -129,7 +128,6 @@
     const user = data?.discord_user;
 
     if (!data || !user) {
-      statusLabelEl.textContent = "Discord presence is unavailable right now.";
       presenceStackEl.innerHTML = "";
       presenceStackEl.hidden = true;
       return;
@@ -140,7 +138,6 @@
     avatarEl.src = getAvatarUrl(user);
     avatarEl.alt = `${getDisplayName(user)} Discord avatar`;
     nameEl.textContent = getDisplayName(user);
-    statusLabelEl.textContent = statusMeta.label;
     statusBadgeEl.className = `discord-status-badge ${statusMeta.className}`;
     statusBadgeEl.setAttribute("aria-label", statusMeta.label);
     statusBadgeEl.setAttribute("title", statusMeta.label);
