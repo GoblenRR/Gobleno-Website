@@ -1,5 +1,6 @@
 (() => {
-  const presenceEndpoint = "https://api.lanyard.rest/v1/users/488391678734893066";
+  const lanyardUserId = "488391678734893066";
+  const lanyardSocketEndpoint = "wss://api.lanyard.rest/socket";
   const currentHash = window.location.hash.replace("#", "").trim().toLowerCase();
   const shouldPlayStartupIntro = !currentHash;
 
@@ -36,32 +37,39 @@
   const nameEl = discordCard.querySelector("[data-discord-name]");
   const statusBadgeEl = discordCard.querySelector("[data-discord-status-badge]");
   const presenceStackEl = discordCard.querySelector("[data-discord-presence]");
+  let activeAvatarKey = "";
+  let heartbeatTimer = null;
+  let reconnectTimer = null;
 
   const escapeHtml = (value) => String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
   const getDefaultAvatarUrl = (user) => {
     const hasModernUsername = user.discriminator === "0";
     const fallbackIndex = hasModernUsername
-      ? Number((BigInt(user.id) >> 22n) % 6n)
+      ? Number(user.id.slice(-2)) % 6
       : Number(user.discriminator) % 5;
 
     return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
   };
 
   const setAvatarImage = (user) => {
+    const avatarKey = user.avatar || `default:${user.id}:${user.discriminator || "0"}`;
+    if (avatarKey === activeAvatarKey) return;
+
     avatarEl.onerror = () => {
       avatarEl.src = getDefaultAvatarUrl(user);
       avatarEl.onerror = null;
     };
 
     avatarEl.src = user.avatar
-      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
+      ? `https://api.lanyard.rest/${user.id}.png?v=${encodeURIComponent(user.avatar)}`
       : getDefaultAvatarUrl(user);
+    activeAvatarKey = avatarKey;
   };
 
   const getDisplayName = (user) => user.display_name || user.global_name || user.username || "Gobleno";
@@ -112,8 +120,8 @@
   };
 
   const renderPresence = (payload) => {
-    const data = payload?.data;
-    const user = data?.discord_user;
+    const data = payload && payload.data ? payload.data : null;
+    const user = data && data.discord_user ? data.discord_user : null;
 
     if (!data || !user) {
       presenceStackEl.innerHTML = "";
@@ -135,17 +143,67 @@
     presenceStackEl.hidden = !presenceMarkup.trim();
   };
 
-  const loadPresence = async () => {
-    try {
-      const response = await fetch(presenceEndpoint, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Presence request failed with ${response.status}`);
-      const payload = await response.json();
-      renderPresence(payload);
-    } catch (_error) {
-      renderPresence(null);
-    }
+  const clearHeartbeat = () => {
+    if (!heartbeatTimer) return;
+    window.clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
   };
 
-  loadPresence();
-  window.setInterval(loadPresence, 15000);
+  const connectPresenceSocket = () => {
+    const socket = new WebSocket(lanyardSocketEndpoint);
+
+    socket.addEventListener("message", (event) => {
+      let payload;
+
+      try {
+        payload = JSON.parse(event.data);
+      } catch (_error) {
+        return;
+      }
+
+      if (payload.op === 1) {
+        clearHeartbeat();
+        heartbeatTimer = window.setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ op: 3 }));
+          }
+        }, payload.d.heartbeat_interval);
+
+        socket.send(JSON.stringify({
+          op: 2,
+          d: {
+            subscribe_to_ids: [lanyardUserId]
+          }
+        }));
+
+        return;
+      }
+
+      if (payload.op !== 0) return;
+
+      if (payload.t === "INIT_STATE") {
+        const initialPresence = payload.d && payload.d[lanyardUserId]
+          ? payload.d[lanyardUserId]
+          : (payload.d || null);
+        renderPresence({ data: initialPresence });
+        return;
+      }
+
+      if (payload.t === "PRESENCE_UPDATE") {
+        renderPresence({ data: payload.d });
+      }
+    });
+
+    socket.addEventListener("close", () => {
+      clearHeartbeat();
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      reconnectTimer = window.setTimeout(connectPresenceSocket, 3000);
+    });
+
+    socket.addEventListener("error", () => {
+      socket.close();
+    });
+  };
+
+  connectPresenceSocket();
 })();

@@ -185,8 +185,6 @@ body.play-startup-intro::before {
   position: relative;
   width: 124px;
   height: 124px;
-  overflow: hidden;
-  border-radius: 50%;
 }
 
 .discord-avatar-shell::before {
@@ -254,10 +252,10 @@ body.play-startup-intro::before {
 .status-idle::before {
   content: "";
   position: absolute;
-  top: 4px;
+  top: 3px;
   left: 4px;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #f0b232;
 }
@@ -266,7 +264,7 @@ body.play-startup-intro::before {
   content: "";
   position: absolute;
   top: 4px;
-  left: 10px;
+  left: 12px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
