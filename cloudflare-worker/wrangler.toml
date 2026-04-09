@@ -1,0 +1,7 @@
+name = "gobleno-videos-api"
+main = "src/index.js"
+compatibility_date = "2026-04-09"
+
+routes = [
+  { pattern = "gobleno.co.uk/api/*", zone_name = "gobleno.co.uk" }
+]
