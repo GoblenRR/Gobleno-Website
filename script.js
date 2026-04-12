@@ -6,6 +6,7 @@
     : "";
   const videosApiUrl = `${apiBaseUrl}/api/videos`;
   const workContentApiUrl = `${apiBaseUrl}/api/work-content`;
+  const workImageUploadApiUrl = `${apiBaseUrl}/api/dev/upload-image`;
   const devSessionApiUrl = `${apiBaseUrl}/api/dev/session`;
   const devLoginApiUrl = `${apiBaseUrl}/api/dev/login`;
   const devSessionStorageKey = "gobleno_dev_token";
@@ -194,6 +195,7 @@
 
     const response = await fetch(url, {
       credentials: "include",
+      cache: "no-store",
       ...options
       ,
       headers
@@ -213,6 +215,19 @@
     }
 
     return payload;
+  };
+
+  const uploadWorkImage = async (file, sectionName) => {
+    const uploadData = new FormData();
+    uploadData.append("section", sectionName);
+    uploadData.append("file", file);
+
+    const payload = await apiRequest(workImageUploadApiUrl, {
+      method: "POST",
+      body: uploadData
+    });
+
+    return String(payload?.public_url || "");
   };
 
   const renderVideos = (videos) => {
@@ -417,13 +432,21 @@
       const section = String(formData.get("section") || "");
       const title = String(formData.get("title") || "");
       const body = String(formData.get("body") || "");
-      const imageUrl = String(formData.get("image_url") || "");
+      const imageUrlInput = String(formData.get("image_url") || "");
+      const imageFile = formData.get("image_file");
       const imageAlt = String(formData.get("image_alt") || "");
       const sortOrder = Number(formData.get("sort_order") || 0);
 
       setDevStatus("saving entry...", "info");
 
       try {
+        let imageUrl = imageUrlInput;
+
+        if (imageFile instanceof File && imageFile.size > 0) {
+          setDevStatus("uploading image...", "info");
+          imageUrl = await uploadWorkImage(imageFile, section);
+        }
+
         await apiRequest(workContentApiUrl, {
           method: "POST",
           headers: {

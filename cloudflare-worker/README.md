@@ -21,13 +21,16 @@ Cloudflare Worker setup for Gobleno site APIs
 7. Add a separate signing secret for the dev session cookie:
    wrangler secret put DEV_SESSION_SECRET
 
-8. In Supabase SQL Editor, run:
+8. Optional: if you want a different storage bucket name than `work-images`:
+   wrangler secret put SUPABASE_STORAGE_BUCKET
+
+9. In Supabase SQL Editor, run:
    ../supabase/setup.sql
 
-9. Deploy the Worker:
+10. Deploy the Worker:
    wrangler deploy
 
-10. Test it:
+11. Test it:
    https://gobleno.co.uk/api/videos
    https://gobleno.co.uk/api/work-content?section=music
    https://gobleno.co.uk/api/work-content?section=ui
@@ -38,3 +41,4 @@ Notes:
 - `SUPABASE_SERVICE_ROLE_KEY` must stay server-side only. It should only live in Worker secrets.
 - The developer password is checked by the Worker, not in the browser.
 - The top-right user icon opens the dev control modal. After login, you can add entries to Music, UI, Games, and Extras.
+- The SQL now also creates a public Supabase Storage bucket named `work-images` for uploaded images.

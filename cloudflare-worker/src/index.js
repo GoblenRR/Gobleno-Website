@@ -5,6 +5,7 @@ const MAX_PAGES = 10;
 const DEV_COOKIE_NAME = "gobleno_dev_session";
 const DEV_SESSION_MAX_AGE = 60 * 60 * 12;
 const ALLOWED_CONTENT_SECTIONS = new Set(["music", "ui", "games", "extras"]);
+const DEFAULT_STORAGE_BUCKET = "work-images";
 
 const encoder = new TextEncoder();
 
@@ -107,7 +108,8 @@ function getDurationSeconds(isoDuration) {
 function getSupabaseConfig(env) {
   return {
     url: (env.SUPABASE_URL || "").replace(/\/$/, ""),
-    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || ""
+    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || "",
+    storageBucket: env.SUPABASE_STORAGE_BUCKET || DEFAULT_STORAGE_BUCKET
   };
 }
 
@@ -138,6 +140,36 @@ async function supabaseRequest(env, path, options = {}) {
   }
 
   return response.json();
+}
+
+async function supabaseStorageUpload(env, objectPath, file, options = {}) {
+  const { url, serviceRoleKey, storageBucket } = getSupabaseConfig(env);
+
+  if (!url || !serviceRoleKey) {
+    throw new Error("supabase_env_missing");
+  }
+
+  const response = await fetch(`${url}/storage/v1/object/${storageBucket}/${objectPath}`, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      "content-type": options.contentType || "application/octet-stream",
+      "x-upsert": options.upsert ? "true" : "false"
+    },
+    body: file
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`storage_upload_failed:${response.status}:${detail}`);
+  }
+
+  return {
+    publicUrl: `${url}/storage/v1/object/public/${storageBucket}/${objectPath}`,
+    bucket: storageBucket,
+    path: objectPath
+  };
 }
 
 function parseCookies(request) {
@@ -325,6 +357,60 @@ function normalizeEntryPayload(payload) {
   };
 }
 
+function sanitizeFilename(name) {
+  const trimmed = String(name || "image").trim().toLowerCase();
+  const parts = trimmed.split(".");
+  const extension = parts.length > 1 ? parts.pop() : "bin";
+  const basename = parts.join(".") || "image";
+  const safeName = basename.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "image";
+  const safeExtension = String(extension || "bin").replace(/[^a-z0-9]+/g, "").slice(0, 8) || "bin";
+  return `${safeName}.${safeExtension}`;
+}
+
+async function handleImageUploadRequest(request, env) {
+  const authState = await inspectAuthSession(request, env);
+
+  if (!authState.authenticated) {
+    return jsonResponse(request, {
+      error: "unauthorized",
+      auth_reason: authState.reason,
+      auth_source: authState.source
+    }, { status: 401, includeCredentials: true });
+  }
+
+  const formData = await request.formData();
+  const section = String(formData.get("section") || "").trim().toLowerCase();
+  const file = formData.get("file");
+
+  if (!ALLOWED_CONTENT_SECTIONS.has(section)) {
+    return jsonResponse(request, { error: "invalid_section" }, { status: 400, includeCredentials: true });
+  }
+
+  if (!(file instanceof File) || !file.size) {
+    return jsonResponse(request, { error: "missing_file" }, { status: 400, includeCredentials: true });
+  }
+
+  if (!String(file.type || "").startsWith("image/")) {
+    return jsonResponse(request, { error: "invalid_file_type" }, { status: 400, includeCredentials: true });
+  }
+
+  const safeFilename = sanitizeFilename(file.name);
+  const objectPath = `${section}/${Date.now()}-${safeFilename}`;
+  const uploadResult = await supabaseStorageUpload(env, objectPath, file.stream(), {
+    contentType: file.type,
+    upsert: false
+  });
+
+  return jsonResponse(request, {
+    public_url: uploadResult.publicUrl,
+    path: uploadResult.path,
+    bucket: uploadResult.bucket
+  }, {
+    status: 201,
+    includeCredentials: true
+  });
+}
+
 async function handleVideosRequest(request, env) {
   if (!env.YOUTUBE_API_KEY) {
     return jsonResponse(request, { error: "missing_youtube_api_key" }, { status: 500, cacheControl: "no-store" });
@@ -402,7 +488,7 @@ async function handleWorkContentGet(request, env) {
     }
   });
 
-  return jsonResponse(request, { section, entries }, { cacheControl: "public, max-age=60" });
+  return jsonResponse(request, { section, entries }, { cacheControl: "no-store" });
 }
 
 async function handleWorkContentCreate(request, env) {
@@ -486,6 +572,10 @@ export default {
 
       if (request.method === "POST" && url.pathname === "/api/work-content") {
         return handleWorkContentCreate(request, env);
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/dev/upload-image") {
+        return handleImageUploadRequest(request, env);
       }
 
       if (request.method === "GET" && url.pathname === "/api/dev/session") {

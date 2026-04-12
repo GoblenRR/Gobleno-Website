@@ -1,5 +1,10 @@
 create extension if not exists pgcrypto;
 
+insert into storage.buckets (id, name, public)
+values ('work-images', 'work-images', true)
+on conflict (id) do update
+set public = excluded.public;
+
 create table if not exists public.work_entries (
   id uuid primary key default gen_random_uuid(),
   section text not null check (section in ('music', 'ui', 'games', 'extras')),
