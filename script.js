@@ -1,9 +1,15 @@
 (() => {
   const lanyardUserId = "488391678734893066";
   const lanyardSocketEndpoint = "wss://api.lanyard.rest/socket";
-  const videosApiUrl = window.location.protocol === "file:"
-    ? "https://gobleno.co.uk/api/videos"
-    : "/api/videos";
+  const apiBaseUrl = window.location.protocol === "file:"
+    ? "https://gobleno.co.uk"
+    : "";
+  const videosApiUrl = `${apiBaseUrl}/api/videos`;
+  const workContentApiUrl = `${apiBaseUrl}/api/work-content`;
+  const devSessionApiUrl = `${apiBaseUrl}/api/dev/session`;
+  const devLoginApiUrl = `${apiBaseUrl}/api/dev/login`;
+  const devSessionStorageKey = "gobleno_dev_token";
+  const contentSections = new Set(["music", "ui", "games", "extras"]);
   const currentHash = window.location.hash.replace("#", "").trim().toLowerCase();
   const shouldPlayStartupIntro = !currentHash || currentHash === "home";
 
@@ -12,11 +18,6 @@
   }
 
   const routeApp = document.querySelector("[data-route-app]");
-  const videosBoard = document.querySelector("[data-videos-board]");
-  const videosStatus = document.querySelector("[data-videos-status]");
-  let videosLoaded = false;
-  let videosLoading = false;
-
   if (routeApp) {
     const routePanels = Array.from(routeApp.querySelectorAll("[data-route-panel]"));
     const routeTabs = Array.from(routeApp.querySelectorAll("[data-tab-for]"));
@@ -49,14 +50,35 @@
         tab.classList.toggle("is-active", tab.dataset.tabFor === nextRoute);
       });
 
-      if (nextRoute === "videos") {
-        loadVideos();
-      }
     };
 
     window.addEventListener("hashchange", applyRoute);
     applyRoute();
   }
+
+  const workSectionTriggers = Array.from(document.querySelectorAll("[data-work-section-trigger]"));
+  const workSectionPanels = Array.from(document.querySelectorAll("[data-work-section-panel]"));
+  const workContentBoards = new Map(
+    Array.from(document.querySelectorAll("[data-work-content-board]")).map((node) => [node.dataset.workContentBoard, node])
+  );
+  const videosBoard = document.querySelector("[data-videos-board]");
+  const videosStatus = document.querySelector("[data-videos-status]");
+  const devToggle = document.querySelector("[data-dev-toggle]");
+  const devModal = document.querySelector("[data-dev-modal]");
+  const devCloseButtons = Array.from(document.querySelectorAll("[data-dev-close]"));
+  const devLoginForm = document.querySelector("[data-dev-login-form]");
+  const devAuthPanel = document.querySelector("[data-dev-auth-panel]");
+  const devEntryForm = document.querySelector("[data-dev-entry-form]");
+  const devStatus = document.querySelector("[data-dev-status]");
+  let activeWorkSection = "videos";
+  let videosLoaded = false;
+  let videosLoading = false;
+  const loadedContentSections = new Set();
+  const loadingContentSections = new Set();
+  let isDevAuthenticated = false;
+  let devSessionToken = window.localStorage.getItem(devSessionStorageKey) || "";
+  let lastSessionDiagnostic = null;
+  let hasAttemptedDevLogin = false;
 
   const escapeHtml = (value) => String(value)
     .replace(/&/g, "&amp;")
@@ -64,6 +86,134 @@
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+
+  const formatMultilineHtml = (value) => escapeHtml(value).replace(/\r?\n/g, "<br>");
+
+  const setDevStatus = (message, tone = "info") => {
+    if (!devStatus) return;
+
+    if (!message) {
+      devStatus.hidden = true;
+      devStatus.textContent = "";
+      devStatus.dataset.tone = "info";
+      return;
+    }
+
+    devStatus.hidden = false;
+    devStatus.textContent = message;
+    devStatus.dataset.tone = tone;
+  };
+
+  const humanizeDiagnostic = (value) => String(value || "").replace(/_/g, " ");
+
+  const formatSessionDiagnostic = (payload) => {
+    if (!payload) {
+      return "session check returned no data";
+    }
+
+    const parts = [];
+
+    if (payload.reason) {
+      parts.push(`reason: ${humanizeDiagnostic(payload.reason)}`);
+    }
+
+    if (payload.source) {
+      parts.push(`source: ${humanizeDiagnostic(payload.source)}`);
+    }
+
+    if (payload.expires_at) {
+      parts.push(`expires: ${new Date(payload.expires_at).toLocaleString()}`);
+    }
+
+    return parts.join(" | ") || "unknown session state";
+  };
+
+  const syncDevUi = () => {
+    if (devModal) {
+      devModal.classList.toggle("is-locked", !isDevAuthenticated);
+      devModal.classList.toggle("is-unlocked", isDevAuthenticated);
+    }
+
+    if (devLoginForm) {
+      devLoginForm.hidden = isDevAuthenticated;
+    }
+
+    if (devAuthPanel) {
+      devAuthPanel.hidden = !isDevAuthenticated;
+    }
+  };
+
+  const openDevModal = () => {
+    if (!devModal) return;
+    devModal.hidden = false;
+  };
+
+  const closeDevModal = () => {
+    if (!devModal) return;
+    devModal.hidden = true;
+    setDevStatus("");
+  };
+
+  const workEntryCardMarkup = (entry) => `
+    <article class="work-entry-card">
+      ${entry.image_url ? `
+      <div class="work-entry-card__media">
+        <img src="${escapeHtml(entry.image_url)}" alt="${escapeHtml(entry.image_alt || entry.title || "Work image")}" loading="lazy">
+      </div>
+      ` : ""}
+      <div class="work-entry-card__body">
+        ${entry.title ? `<h3 class="work-entry-card__title">${escapeHtml(entry.title)}</h3>` : ""}
+        ${entry.body ? `<p class="work-entry-card__copy">${formatMultilineHtml(entry.body)}</p>` : ""}
+      </div>
+    </article>
+  `;
+
+  const renderWorkSectionEntries = (sectionName, entries, fallbackMessage = "this section is empty") => {
+    const board = workContentBoards.get(sectionName);
+
+    if (!board) return;
+
+    if (!entries.length) {
+      board.innerHTML = `<p class="work-content-status work-empty-state">${escapeHtml(fallbackMessage)}</p>`;
+      return;
+    }
+
+    board.innerHTML = `
+      <div class="work-entry-grid">
+        ${entries.map((entry) => workEntryCardMarkup(entry)).join("")}
+      </div>
+    `;
+  };
+
+  const apiRequest = async (url, options = {}) => {
+    const headers = new Headers(options.headers || {});
+
+    if (devSessionToken) {
+      headers.set("authorization", `Bearer ${devSessionToken}`);
+    }
+
+    const response = await fetch(url, {
+      credentials: "include",
+      ...options
+      ,
+      headers
+    });
+
+    let payload = null;
+
+    try {
+      payload = await response.json();
+    } catch (_error) {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      const errorMessage = payload?.error || payload?.detail || `request_failed:${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return payload;
+  };
 
   const renderVideos = (videos) => {
     if (!videosBoard || !videosStatus) return;
@@ -113,7 +263,209 @@
     }
   }
 
-  const hoverTargets = Array.from(document.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark"));
+  async function loadWorkSectionContent(sectionName) {
+    if (!contentSections.has(sectionName) || loadedContentSections.has(sectionName) || loadingContentSections.has(sectionName)) return;
+
+    const board = workContentBoards.get(sectionName);
+
+    if (!board) return;
+
+    loadingContentSections.add(sectionName);
+    board.innerHTML = `<p class="work-content-status work-empty-state">loading...</p>`;
+
+    try {
+      const payload = await apiRequest(`${workContentApiUrl}?section=${encodeURIComponent(sectionName)}`);
+      const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+
+      loadedContentSections.add(sectionName);
+      renderWorkSectionEntries(sectionName, entries);
+    } catch (_error) {
+      renderWorkSectionEntries(sectionName, [], "unable to load this section right now");
+    } finally {
+      loadingContentSections.delete(sectionName);
+    }
+  }
+
+  async function refreshDevSession() {
+    try {
+      const payload = await apiRequest(devSessionApiUrl);
+      lastSessionDiagnostic = payload;
+      isDevAuthenticated = Boolean(payload?.authenticated);
+
+      console.info("dev session check", payload);
+
+      if (!isDevAuthenticated) {
+        devSessionToken = "";
+        window.localStorage.removeItem(devSessionStorageKey);
+
+        if (hasAttemptedDevLogin) {
+          setDevStatus(formatSessionDiagnostic(payload), "error");
+        }
+      }
+    } catch (_error) {
+      isDevAuthenticated = false;
+      devSessionToken = "";
+      window.localStorage.removeItem(devSessionStorageKey);
+      lastSessionDiagnostic = null;
+    }
+
+    syncDevUi();
+  }
+
+  const setActiveWorkSection = (sectionName) => {
+    activeWorkSection = sectionName;
+
+    workSectionTriggers.forEach((trigger) => {
+      const isActive = trigger.dataset.workSectionTrigger === sectionName;
+      trigger.classList.toggle("is-active", isActive);
+      trigger.setAttribute("aria-pressed", String(isActive));
+    });
+
+    workSectionPanels.forEach((panel) => {
+      const isActive = panel.dataset.workSectionPanel === sectionName;
+      panel.hidden = !isActive;
+      panel.setAttribute("aria-hidden", String(!isActive));
+    });
+
+    if (sectionName === "videos") {
+      loadVideos();
+      return;
+    }
+
+    if (contentSections.has(sectionName)) {
+      loadWorkSectionContent(sectionName);
+    }
+  };
+
+  if (workSectionTriggers.length) {
+    workSectionTriggers.forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        setActiveWorkSection(trigger.dataset.workSectionTrigger || "videos");
+      });
+    });
+
+    setActiveWorkSection(activeWorkSection);
+  }
+
+  if (devToggle) {
+    devToggle.addEventListener("click", async () => {
+      openDevModal();
+      await refreshDevSession();
+    });
+  }
+
+  devCloseButtons.forEach((button) => {
+    button.addEventListener("click", closeDevModal);
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && devModal && !devModal.hidden) {
+      closeDevModal();
+    }
+  });
+
+  if (devLoginForm) {
+    devLoginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      hasAttemptedDevLogin = true;
+
+      const formData = new FormData(devLoginForm);
+      const password = String(formData.get("password") || "");
+
+      setDevStatus("unlocking...", "info");
+
+      try {
+        const payload = await apiRequest(devLoginApiUrl, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({ password })
+        });
+
+        devSessionToken = String(payload?.token || "");
+
+        if (devSessionToken) {
+          window.localStorage.setItem(devSessionStorageKey, devSessionToken);
+        }
+
+        await refreshDevSession();
+
+        if (!isDevAuthenticated) {
+          setDevStatus(`password accepted but session failed | ${formatSessionDiagnostic(lastSessionDiagnostic)}`, "error");
+          return;
+        }
+
+        devLoginForm.reset();
+        setDevStatus("developer controls unlocked", "success");
+      } catch (error) {
+        isDevAuthenticated = false;
+        devSessionToken = "";
+        window.localStorage.removeItem(devSessionStorageKey);
+        syncDevUi();
+        console.error("dev login failed", error);
+        setDevStatus(error instanceof Error ? error.message.replace(/_/g, " ") : "incorrect password", "error");
+      }
+    });
+  }
+
+  if (devEntryForm) {
+    devEntryForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const formData = new FormData(devEntryForm);
+      const section = String(formData.get("section") || "");
+      const title = String(formData.get("title") || "");
+      const body = String(formData.get("body") || "");
+      const imageUrl = String(formData.get("image_url") || "");
+      const imageAlt = String(formData.get("image_alt") || "");
+      const sortOrder = Number(formData.get("sort_order") || 0);
+
+      setDevStatus("saving entry...", "info");
+
+      try {
+        await apiRequest(workContentApiUrl, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            section,
+            title,
+            body,
+            image_url: imageUrl,
+            image_alt: imageAlt,
+            sort_order: sortOrder
+          })
+        });
+
+        loadedContentSections.delete(section);
+        renderWorkSectionEntries(section, [], "loading...");
+        setActiveWorkSection(section);
+        devEntryForm.reset();
+        const sectionField = devEntryForm.querySelector('[name="section"]');
+        const sortField = devEntryForm.querySelector('[name="sort_order"]');
+
+        if (sectionField instanceof HTMLSelectElement) {
+          sectionField.value = section;
+        }
+
+        if (sortField instanceof HTMLInputElement) {
+          sortField.value = "0";
+        }
+
+        setDevStatus("entry added", "success");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unable to save entry";
+        console.error("save entry failed", error);
+        setDevStatus(message.replace(/_/g, " "), "error");
+      }
+    });
+  }
+
+  refreshDevSession();
+
+  const hoverTargets = Array.from(document.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark, .work-category-card, .dev-control-button, .dev-submit-button"));
 
   if (hoverTargets.length) {
     const hoverAudio = new Audio("./hover-ui.mp3");

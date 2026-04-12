@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gobleno</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="styles.css?v=20260409-24">
+  <link rel="stylesheet" href="styles.css?v=20260412-05">
   <!-- Cloudflare Web Analytics -->
   <script
     defer
@@ -13,7 +13,7 @@
     data-cf-beacon='{"token":"49d5712aa2464770892adfdadf1d8731"}'
   ></script>
   <!-- End Cloudflare Web Analytics -->
-  <script src="script.js?v=20260409-24" defer></script>
+  <script src="script.js?v=20260412-05" defer></script>
 </head>
 <body class="page-shell">
   <div class="bg-shape bg-shape-one"></div>
@@ -37,15 +37,20 @@
           </a>
           <h1 class="app-title">Gobleno</h1>
         </div>
+        <div class="app-topbar__actions">
+          <button class="dev-control-button" type="button" aria-label="Developer controls" data-dev-toggle>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.33 0-8 2.17-8 4.75V21h16v-2.25C20 16.17 16.33 14 12 14Z"></path>
+            </svg>
+          </button>
+        </div>
       </header>
 
       <nav class="app-tabs" aria-label="Primary navigation">
         <a class="app-tab" href="#home" data-route-link="home" data-tab-for="home">Home</a>
         <a class="app-tab" href="#links" data-route-link="links" data-tab-for="links">Links</a>
-        <a class="app-tab" href="#videos" data-route-link="videos" data-tab-for="videos">Videos</a>
-        <a class="app-tab" href="#ui" data-route-link="ui" data-tab-for="ui">UI Design</a>
+        <a class="app-tab" href="#my-work" data-route-link="my-work" data-tab-for="my-work">My Work</a>
         <a class="app-tab" href="#contact" data-route-link="contact" data-tab-for="contact">Contact</a>
-        <a class="app-tab" href="#placeholder" data-route-link="placeholder" data-tab-for="placeholder">Coming Soon</a>
       </nav>
 
       <section class="app-stage">
@@ -138,34 +143,69 @@
         </section>
 
         <section
-          class="route-panel route-screen ui-screen"
-          data-route-panel="ui"
+          class="route-panel route-screen my-work-screen"
+          data-route-panel="my-work"
           aria-hidden="true"
           hidden
         >
           <div class="panel-heading">
-            <h2 class="panel-title">UI Design</h2>
+            <h2 class="panel-title">My Work</h2>
           </div>
 
-          <div class="showcase-board">
-            <article class="showcase-block showcase-block--large"></article>
-            <article class="showcase-block showcase-block--small"></article>
-            <article class="showcase-block showcase-block--accent"></article>
+          <div class="work-categories" aria-label="My Work categories">
+            <section class="work-category-group" aria-label="Music category">
+              <button class="work-category-card" type="button" data-work-section-trigger="music">
+                <h3 class="work-category-card__title">Music</h3>
+              </button>
+            </section>
+            <section class="work-category-group" aria-label="Videos category">
+              <button class="work-category-card" type="button" data-work-section-trigger="videos">
+                <h3 class="work-category-card__title">Videos</h3>
+              </button>
+            </section>
+            <section class="work-category-group" aria-label="UI category">
+              <button class="work-category-card" type="button" data-work-section-trigger="ui">
+                <h3 class="work-category-card__title">UI</h3>
+              </button>
+            </section>
+            <section class="work-category-group" aria-label="Games category">
+              <button class="work-category-card" type="button" data-work-section-trigger="games">
+                <h3 class="work-category-card__title">Games</h3>
+              </button>
+            </section>
+            <section class="work-category-group" aria-label="Extras category">
+              <button class="work-category-card" type="button" data-work-section-trigger="extras">
+                <h3 class="work-category-card__title">Extras</h3>
+              </button>
+            </section>
           </div>
-        </section>
 
-        <section
-          class="route-panel route-screen videos-screen"
-          data-route-panel="videos"
-          aria-hidden="true"
-          hidden
-        >
-          <div class="panel-heading">
-            <h2 class="panel-title">Videos</h2>
-          </div>
-
-          <div class="videos-board" data-videos-board>
-            <p class="videos-status" data-videos-status>Loading videos...</p>
+          <div class="work-section-panels">
+            <section class="work-section-panel" data-work-section-panel="music" hidden aria-hidden="true">
+              <div class="work-content-board" data-work-content-board="music">
+                <p class="work-content-status work-empty-state" data-work-content-status="music">this section is empty</p>
+              </div>
+            </section>
+            <section class="work-section-panel" data-work-section-panel="videos" hidden aria-hidden="true">
+              <div class="videos-board" data-videos-board>
+                <p class="videos-status" data-videos-status>Loading videos...</p>
+              </div>
+            </section>
+            <section class="work-section-panel" data-work-section-panel="ui" hidden aria-hidden="true">
+              <div class="work-content-board" data-work-content-board="ui">
+                <p class="work-content-status work-empty-state" data-work-content-status="ui">this section is empty</p>
+              </div>
+            </section>
+            <section class="work-section-panel" data-work-section-panel="games" hidden aria-hidden="true">
+              <div class="work-content-board" data-work-content-board="games">
+                <p class="work-content-status work-empty-state" data-work-content-status="games">this section is empty</p>
+              </div>
+            </section>
+            <section class="work-section-panel" data-work-section-panel="extras" hidden aria-hidden="true">
+              <div class="work-content-board" data-work-content-board="extras">
+                <p class="work-content-status work-empty-state" data-work-content-status="extras">this section is empty</p>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -180,30 +220,70 @@
           </div>
         </section>
 
-        <section
-          class="route-panel route-screen placeholder-screen"
-          data-route-panel="placeholder"
-          aria-hidden="true"
-          hidden
-        >
-          <div class="panel-heading">
-            <h2 class="panel-title">Coming Soon</h2>
-          </div>
-
-          <div class="placeholder-board placeholder-board--centered">
-            <div class="discord-illustration discord-illustration--large" aria-hidden="true">
-              <span class="cloud-strip cloud-strip--one"></span>
-              <span class="cloud-strip cloud-strip--two"></span>
-              <span class="cloud-strip cloud-strip--three"></span>
-              <span class="cloud-strip cloud-strip--four"></span>
-              <span class="search-badge">
-                <span class="search-badge__inner">?</span>
-              </span>
-            </div>
-          </div>
-        </section>
       </section>
     </section>
   </main>
+
+  <div class="dev-modal-shell" data-dev-modal hidden>
+    <div class="dev-modal-backdrop" data-dev-close></div>
+    <section class="dev-modal" role="dialog" aria-modal="true" aria-labelledby="dev-modal-title">
+      <button class="dev-modal__close" type="button" aria-label="Close developer controls" data-dev-close>×</button>
+      <div class="dev-modal__header">
+        <p class="dev-modal__eyebrow">Developer Control</p>
+        <h2 class="dev-modal__title" id="dev-modal-title">Manage My Work content</h2>
+      </div>
+
+      <p class="dev-modal__message" data-dev-status hidden></p>
+
+      <form class="dev-form" data-dev-login-form>
+        <label class="dev-field">
+          <span class="dev-field__label">Password</span>
+          <input class="dev-field__input" type="password" name="password" placeholder="Enter dev password" required>
+        </label>
+        <button class="dev-submit-button" type="submit">Unlock</button>
+      </form>
+
+      <section class="dev-auth-panel" data-dev-auth-panel hidden>
+        <form class="dev-form" data-dev-entry-form>
+          <label class="dev-field">
+            <span class="dev-field__label">Section</span>
+            <select class="dev-field__input" name="section" required>
+              <option value="music">Music</option>
+              <option value="ui">UI</option>
+              <option value="games">Games</option>
+              <option value="extras">Extras</option>
+            </select>
+          </label>
+
+          <label class="dev-field">
+            <span class="dev-field__label">Title</span>
+            <input class="dev-field__input" type="text" name="title" placeholder="Entry title">
+          </label>
+
+          <label class="dev-field">
+            <span class="dev-field__label">Text</span>
+            <textarea class="dev-field__input dev-field__input--textarea" name="body" placeholder="Write the content for this entry"></textarea>
+          </label>
+
+          <label class="dev-field">
+            <span class="dev-field__label">URL</span>
+            <input class="dev-field__input" type="url" name="image_url" placeholder="https://...">
+          </label>
+
+          <label class="dev-field">
+            <span class="dev-field__label">Alt text</span>
+            <input class="dev-field__input" type="text" name="image_alt" placeholder="Describe the image">
+          </label>
+
+          <label class="dev-field">
+            <span class="dev-field__label">Sort order</span>
+            <input class="dev-field__input" type="number" name="sort_order" value="0" step="1">
+          </label>
+
+          <button class="dev-submit-button" type="submit">Add entry</button>
+        </form>
+      </section>
+    </section>
+  </div>
 </body>
 </html>
