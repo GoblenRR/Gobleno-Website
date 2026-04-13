@@ -6,13 +6,25 @@ const DEV_COOKIE_NAME = "gobleno_dev_session";
 const DEV_SESSION_MAX_AGE = 60 * 60 * 12;
 const ALLOWED_CONTENT_SECTIONS = new Set(["music", "ui", "games", "extras"]);
 const DEFAULT_STORAGE_BUCKET = "work-images";
+const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AUDIO_EXTENSIONS = new Set(["mp3", "wav", "ogg"]);
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/wave",
+  "audio/x-wav",
+  "audio/vnd.wave",
+  "audio/ogg",
+  "application/ogg"
+]);
 
 const encoder = new TextEncoder();
 
 function getOriginHeaders(request, includeCredentials = false) {
   const origin = request.headers.get("Origin");
   const headers = {
-    "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
     "access-control-allow-headers": "authorization, content-type"
   };
 
@@ -327,6 +339,27 @@ async function readJsonBody(request) {
   }
 }
 
+function getFileExtension(name) {
+  const trimmed = String(name || "").trim().toLowerCase();
+  const segments = trimmed.split(".");
+  return segments.length > 1 ? segments.pop() || "" : "";
+}
+
+function isSupportedAudioType(audioType = "", sourceName = "") {
+  const normalizedType = String(audioType || "").trim().toLowerCase();
+  const extension = getFileExtension(sourceName);
+
+  if (extension && !ALLOWED_AUDIO_EXTENSIONS.has(extension)) {
+    return false;
+  }
+
+  if (!normalizedType) {
+    return extension ? ALLOWED_AUDIO_EXTENSIONS.has(extension) : false;
+  }
+
+  return ALLOWED_AUDIO_MIME_TYPES.has(normalizedType);
+}
+
 function normalizeEntryPayload(payload) {
   const section = String(payload?.section || "").trim().toLowerCase();
   const title = String(payload?.title || "").trim();
@@ -334,13 +367,16 @@ function normalizeEntryPayload(payload) {
   const linkUrl = String(payload?.link_url || "").trim();
   const imageUrl = String(payload?.image_url || "").trim();
   const imageAlt = String(payload?.image_alt || "").trim();
+  const audioUrl = String(payload?.audio_url || "").trim();
+  const audioType = String(payload?.audio_type || "").trim().toLowerCase();
+  const audioSizeBytes = Number(payload?.audio_size_bytes || 0);
   const sortOrder = Number(payload?.sort_order || 0);
 
   if (!ALLOWED_CONTENT_SECTIONS.has(section)) {
     throw new Error("invalid_section");
   }
 
-  if (!title && !body && !imageUrl) {
+  if (!title && !body && !imageUrl && !audioUrl) {
     throw new Error("content_required");
   }
 
@@ -352,6 +388,18 @@ function normalizeEntryPayload(payload) {
     throw new Error("invalid_image_url");
   }
 
+  if (audioUrl && !/^https?:\/\//i.test(audioUrl)) {
+    throw new Error("invalid_audio_url");
+  }
+
+  if (audioUrl && !isSupportedAudioType(audioType, audioUrl)) {
+    throw new Error("invalid_audio_type");
+  }
+
+  if (audioUrl && Number.isFinite(audioSizeBytes) && audioSizeBytes > MAX_AUDIO_BYTES) {
+    throw new Error("audio_file_too_large");
+  }
+
   return {
     section,
     title,
@@ -359,21 +407,46 @@ function normalizeEntryPayload(payload) {
     link_url: linkUrl || null,
     image_url: imageUrl || null,
     image_alt: imageAlt || null,
+    audio_url: audioUrl || null,
+    audio_type: audioUrl ? (audioType || null) : null,
+    audio_size_bytes: audioUrl && Number.isFinite(audioSizeBytes) && audioSizeBytes > 0 ? audioSizeBytes : null,
     sort_order: Number.isFinite(sortOrder) ? sortOrder : 0
   };
 }
 
 function sanitizeFilename(name) {
-  const trimmed = String(name || "image").trim().toLowerCase();
+  const trimmed = String(name || "file").trim().toLowerCase();
   const parts = trimmed.split(".");
   const extension = parts.length > 1 ? parts.pop() : "bin";
-  const basename = parts.join(".") || "image";
-  const safeName = basename.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "image";
+  const basename = parts.join(".") || "file";
+  const safeName = basename.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "file";
   const safeExtension = String(extension || "bin").replace(/[^a-z0-9]+/g, "").slice(0, 8) || "bin";
   return `${safeName}.${safeExtension}`;
 }
 
-async function handleImageUploadRequest(request, env) {
+function classifyUpload(file) {
+  const mimeType = String(file?.type || "").trim().toLowerCase();
+  const extension = getFileExtension(file?.name);
+
+  if (mimeType.startsWith("image/")) {
+    return { kind: "image", contentType: mimeType };
+  }
+
+  if (isSupportedAudioType(mimeType, file?.name || extension)) {
+    return {
+      kind: "audio",
+      contentType: mimeType || ({
+        mp3: "audio/mpeg",
+        wav: "audio/wav",
+        ogg: "audio/ogg"
+      }[extension] || "application/octet-stream")
+    };
+  }
+
+  return null;
+}
+
+async function handleAssetUploadRequest(request, env) {
   const authState = await inspectAuthSession(request, env);
 
   if (!authState.authenticated) {
@@ -396,21 +469,30 @@ async function handleImageUploadRequest(request, env) {
     return jsonResponse(request, { error: "missing_file" }, { status: 400, includeCredentials: true });
   }
 
-  if (!String(file.type || "").startsWith("image/")) {
+  const asset = classifyUpload(file);
+
+  if (!asset) {
     return jsonResponse(request, { error: "invalid_file_type" }, { status: 400, includeCredentials: true });
   }
 
+  if (asset.kind === "audio" && file.size > MAX_AUDIO_BYTES) {
+    return jsonResponse(request, { error: "audio_file_too_large" }, { status: 400, includeCredentials: true });
+  }
+
   const safeFilename = sanitizeFilename(file.name);
-  const objectPath = `${section}/${Date.now()}-${safeFilename}`;
+  const objectPath = `${section}/${asset.kind}/${Date.now()}-${safeFilename}`;
   const uploadResult = await supabaseStorageUpload(env, objectPath, file.stream(), {
-    contentType: file.type,
+    contentType: asset.contentType,
     upsert: false
   });
 
   return jsonResponse(request, {
     public_url: uploadResult.publicUrl,
     path: uploadResult.path,
-    bucket: uploadResult.bucket
+    bucket: uploadResult.bucket,
+    kind: asset.kind,
+    content_type: asset.contentType,
+    size_bytes: file.size
   }, {
     status: 201,
     includeCredentials: true
@@ -486,7 +568,10 @@ async function handleWorkContentGet(request, env) {
     return jsonResponse(request, { error: "invalid_section" }, { status: 400 });
   }
 
-  const query = `work_entries?section=eq.${encodeURIComponent(section)}&select=id,section,title,body,link_url,image_url,image_alt,sort_order,created_at,updated_at&order=sort_order.asc.nullslast,created_at.desc,id.asc`;
+  const query = "work_entries"
+    + `?section=eq.${encodeURIComponent(section)}`
+    + "&select=id,section,title,body,link_url,image_url,image_alt,audio_url,audio_type,audio_size_bytes,sort_order,created_at,updated_at"
+    + "&order=sort_order.asc.nullslast,created_at.desc,id.asc";
   const entries = await supabaseRequest(env, query, {
     method: "GET",
     headers: {
@@ -523,6 +608,57 @@ async function handleWorkContentCreate(request, env) {
   });
 }
 
+function isValidEntryId(entryId) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entryId);
+}
+
+async function handleWorkContentUpdate(request, env) {
+  const authState = await inspectAuthSession(request, env);
+
+  if (!authState.authenticated) {
+    return jsonResponse(request, {
+      error: "unauthorized",
+      auth_reason: authState.reason,
+      auth_source: authState.source
+    }, { status: 401, includeCredentials: true });
+  }
+
+  const url = new URL(request.url);
+  const body = await readJsonBody(request);
+  const entryId = String(url.searchParams.get("id") || body?.id || "").trim();
+
+  if (!isValidEntryId(entryId)) {
+    return jsonResponse(request, { error: "invalid_entry_id" }, {
+      status: 400,
+      includeCredentials: true
+    });
+  }
+
+  const payload = normalizeEntryPayload(body);
+  const updatedEntries = await supabaseRequest(
+    env,
+    `work_entries?id=eq.${encodeURIComponent(entryId)}&select=id,section,title,body,link_url,image_url,image_alt,audio_url,audio_type,audio_size_bytes,sort_order,created_at,updated_at`,
+    {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  if (!Array.isArray(updatedEntries) || !updatedEntries.length) {
+    return jsonResponse(request, { error: "entry_not_found" }, {
+      status: 404,
+      includeCredentials: true
+    });
+  }
+
+  return jsonResponse(request, { entry: updatedEntries[0] }, {
+    includeCredentials: true
+  });
+}
+
 async function handleWorkContentDelete(request, env) {
   const authState = await inspectAuthSession(request, env);
 
@@ -535,12 +671,10 @@ async function handleWorkContentDelete(request, env) {
   }
 
   const url = new URL(request.url);
-  const rawId = String(url.searchParams.get("id") || "").trim();
+  const entryId = String(url.searchParams.get("id") || "").trim();
   const section = String(url.searchParams.get("section") || "").trim().toLowerCase();
-  const entryId = rawId;
-  const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entryId);
 
-  if (!isValidUuid) {
+  if (!isValidEntryId(entryId)) {
     return jsonResponse(request, { error: "invalid_entry_id" }, {
       status: 400,
       includeCredentials: true
@@ -637,12 +771,16 @@ export default {
         return handleWorkContentCreate(request, env);
       }
 
+      if (request.method === "PUT" && url.pathname === "/api/work-content") {
+        return handleWorkContentUpdate(request, env);
+      }
+
       if (request.method === "DELETE" && url.pathname === "/api/work-content") {
         return handleWorkContentDelete(request, env);
       }
 
       if (request.method === "POST" && url.pathname === "/api/dev/upload-image") {
-        return handleImageUploadRequest(request, env);
+        return handleAssetUploadRequest(request, env);
       }
 
       if (request.method === "GET" && url.pathname === "/api/dev/session") {

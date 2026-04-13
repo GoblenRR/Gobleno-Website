@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gobleno</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="styles.css?v=20260412-05">
+  <link rel="stylesheet" href="styles.css?v=20260413-01">
   <!-- Cloudflare Web Analytics -->
   <script
     defer
@@ -13,7 +13,7 @@
     data-cf-beacon='{"token":"49d5712aa2464770892adfdadf1d8731"}'
   ></script>
   <!-- End Cloudflare Web Analytics -->
-  <script src="script.js?v=20260412-05" defer></script>
+  <script src="script.js?v=20260413-01" defer></script>
 </head>
 <body class="page-shell">
   <div class="bg-shape bg-shape-one"></div>
@@ -65,7 +65,7 @@
               <div class="profile-card" data-depth-card>
                 <div class="profile-card__shine"></div>
                 <div class="discord-profile">
-                  <div class="discord-avatar-shell">
+                  <div class="discord-avatar-shell" data-image-shell>
                     <img
                       class="discord-avatar"
                       data-discord-avatar
@@ -124,8 +124,8 @@
           <div class="links-board">
             <a class="social-card social-card--youtube" href="https://www.youtube.com/@GoblenoRR" target="_blank" rel="noreferrer" data-depth-card>
               <span class="social-card__tile">
-                <span class="social-card__icon">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="">
+                <span class="social-card__icon" data-image-shell>
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YouTube logo">
                 </span>
               </span>
               <span class="social-card__title">YouTube</span>
@@ -133,11 +133,47 @@
 
             <a class="social-card social-card--discord" href="https://discord.com/invite/WYwjKddwmK" target="_blank" rel="noreferrer" data-depth-card>
               <span class="social-card__tile">
-                <span class="social-card__icon">
-                  <img src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d7f4ef6498ac018f2c55_Symbol.svg" alt="">
+                <span class="social-card__icon" data-image-shell>
+                  <img src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d7f4ef6498ac018f2c55_Symbol.svg" alt="Discord logo">
                 </span>
               </span>
               <span class="social-card__title">Discord</span>
+            </a>
+
+            <a class="social-card social-card--tiktok" href="https://www.tiktok.com/@goblenorr" target="_blank" rel="noreferrer" data-depth-card>
+              <span class="social-card__tile">
+                <span class="social-card__icon" data-image-shell>
+                  <img src="https://cdn.simpleicons.org/tiktok/111111" alt="TikTok logo">
+                </span>
+              </span>
+              <span class="social-card__title">TikTok</span>
+            </a>
+
+            <a class="social-card social-card--instagram" href="https://www.instagram.com/goblenorr/" target="_blank" rel="noreferrer" data-depth-card>
+              <span class="social-card__tile">
+                <span class="social-card__icon" data-image-shell>
+                  <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/instagram-white-icon.png" alt="Instagram logo">
+                </span>
+              </span>
+              <span class="social-card__title">Instagram</span>
+            </a>
+
+            <a class="social-card social-card--x" href="https://x.com/GOBLENXD" target="_blank" rel="noreferrer" data-depth-card>
+              <span class="social-card__tile">
+                <span class="social-card__icon" data-image-shell>
+                  <img src="https://cdn.simpleicons.org/x/111111" alt="X logo">
+                </span>
+              </span>
+              <span class="social-card__title">X</span>
+            </a>
+
+            <a class="social-card social-card--roblox" href="https://www.roblox.com/users/108486980/profile" target="_blank" rel="noreferrer" data-depth-card>
+              <span class="social-card__tile">
+                <span class="social-card__icon" data-image-shell>
+                  <img src="https://cdn.simpleicons.org/roblox/111111" alt="Roblox logo">
+                </span>
+              </span>
+              <span class="social-card__title">Roblox</span>
             </a>
           </div>
         </section>
@@ -221,7 +257,7 @@
           <div class="contact-board">
             <div class="contact-shell">
               <div class="contact-card contact-card--intro">
-                <p class="contact-eyebrow">Let’s build something</p>
+                <p class="contact-eyebrow">Let's build something</p>
                 <h3 class="contact-title">Tell me the details so I can respond fast.</h3>
                 <p class="contact-copy">Include the type of work, timeline, and anything you already have (brief, references, links). A few bullet points is perfect.</p>
                 <div class="contact-notes">
@@ -260,7 +296,6 @@
             </div>
           </div>
         </section>
-
       </section>
     </section>
   </main>
@@ -269,14 +304,16 @@
     <div class="dev-modal-backdrop" data-dev-close></div>
     <section class="dev-modal" role="dialog" aria-modal="true" aria-labelledby="dev-modal-title">
       <button class="dev-modal__close" type="button" aria-label="Close developer controls" data-dev-close>×</button>
-      <div class="dev-modal__header">
-        <p class="dev-modal__eyebrow">Developer Control</p>
-        <h2 class="dev-modal__title" id="dev-modal-title">Manage My Work content</h2>
+      <div class="dev-modal__masthead">
+        <div class="dev-modal__header">
+          <p class="dev-modal__eyebrow">Developer Control</p>
+          <h2 class="dev-modal__title" id="dev-modal-title">Manage My Work content</h2>
+          <p class="dev-modal__subtitle">Add, edit, sort, and review entries in a full workspace without leaving the site.</p>
+        </div>
+        <p class="dev-modal__message" data-dev-status hidden></p>
       </div>
 
-      <p class="dev-modal__message" data-dev-status hidden></p>
-
-      <form class="dev-form" data-dev-login-form>
+      <form class="dev-form dev-form--login" data-dev-login-form>
         <label class="dev-field">
           <span class="dev-field__label">Password</span>
           <input class="dev-field__input" type="password" name="password" placeholder="Enter dev password" required>
@@ -285,50 +322,71 @@
       </form>
 
       <section class="dev-auth-panel" data-dev-auth-panel hidden>
-        <form class="dev-form" data-dev-entry-form>
-          <label class="dev-field">
-            <span class="dev-field__label">Section</span>
-            <select class="dev-field__input" name="section" required>
-              <option value="music">Music</option>
-              <option value="ui">UI</option>
-              <option value="games">Games</option>
-              <option value="extras">Extras</option>
-            </select>
-          </label>
+        <section class="dev-panel-card">
+          <div class="dev-panel-card__header">
+            <div>
+              <p class="dev-entry-manager__eyebrow">Composer</p>
+              <h3 class="dev-entry-manager__title">Create or update an entry</h3>
+            </div>
 
-          <label class="dev-field">
-            <span class="dev-field__label">Title</span>
-            <input class="dev-field__input" type="text" name="title" placeholder="Entry title">
-          </label>
+            <div class="dev-edit-state" data-dev-edit-state hidden>
+              <span class="dev-edit-state__badge">Edit mode</span>
+              <span class="dev-edit-state__text" data-dev-edit-label>Updating existing entry</span>
+            </div>
+          </div>
 
-          <label class="dev-field">
-            <span class="dev-field__label">Text</span>
-            <textarea class="dev-field__input dev-field__input--textarea" name="body" placeholder="Write the content for this entry"></textarea>
-          </label>
+          <form class="dev-form" data-dev-entry-form>
+            <input type="hidden" name="entry_id" value="">
 
-          <label class="dev-field">
-            <span class="dev-field__label">URL</span>
-            <input class="dev-field__input" type="url" name="link_url" placeholder="https://...">
-          </label>
+            <label class="dev-field">
+              <span class="dev-field__label">Section</span>
+              <select class="dev-field__input" name="section" required>
+                <option value="music">Music</option>
+                <option value="ui">UI</option>
+                <option value="games">Games</option>
+                <option value="extras">Extras</option>
+              </select>
+            </label>
 
-          <label class="dev-field">
-            <span class="dev-field__label">Image file</span>
-            <input class="dev-field__input dev-field__input--file" type="file" name="image_file" accept="image/*">
-          </label>
+            <label class="dev-field">
+              <span class="dev-field__label">Title</span>
+              <input class="dev-field__input" type="text" name="title" placeholder="Entry title">
+            </label>
 
-          <label class="dev-field">
-            <span class="dev-field__label">Sort order</span>
-            <input class="dev-field__input" type="number" name="sort_order" value="0" step="1">
-          </label>
+            <label class="dev-field">
+              <span class="dev-field__label">Text</span>
+              <textarea class="dev-field__input dev-field__input--textarea" name="body" placeholder="Write the content for this entry"></textarea>
+            </label>
 
-          <button class="dev-submit-button" type="submit">Add entry</button>
-        </form>
+            <label class="dev-field">
+              <span class="dev-field__label">URL</span>
+              <input class="dev-field__input" type="url" name="link_url" placeholder="https://...">
+            </label>
 
-        <section class="dev-entry-manager">
+            <label class="dev-field">
+              <span class="dev-field__label">Attachment</span>
+              <input class="dev-field__input dev-field__input--file" type="file" name="attachment_file" accept="image/*,.mp3,.wav,.ogg,audio/mpeg,audio/wav,audio/ogg">
+              <p class="dev-field__hint">Attach an image or audio file. Supported audio formats: .mp3, .wav, .ogg.</p>
+              <p class="dev-field__hint dev-field__hint--warning">Keep audio files under 5 MB.</p>
+            </label>
+
+            <label class="dev-field">
+              <span class="dev-field__label">Sort order</span>
+              <input class="dev-field__input" type="number" name="sort_order" value="0" step="1">
+            </label>
+
+            <div class="dev-form__actions">
+              <button class="dev-submit-button" type="submit" data-dev-submit-label>Add entry</button>
+              <button class="dev-submit-button dev-submit-button--ghost" type="button" data-dev-cancel-edit hidden>Cancel edit</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="dev-panel-card dev-entry-manager">
           <div class="dev-entry-manager__header">
             <div>
-              <p class="dev-entry-manager__eyebrow">Delete Entries</p>
-              <h3 class="dev-entry-manager__title">Remove existing work items</h3>
+              <p class="dev-entry-manager__eyebrow">Library</p>
+              <h3 class="dev-entry-manager__title">Review and manage existing entries</h3>
             </div>
 
             <label class="dev-field">
@@ -348,6 +406,13 @@
         </section>
       </section>
     </section>
+  </div>
+
+  <div class="image-preview-shell" data-image-preview hidden>
+    <div class="image-preview-backdrop" data-image-preview-close></div>
+    <div class="image-preview-dialog" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img class="image-preview-dialog__image" data-image-preview-image alt="">
+    </div>
   </div>
 </body>
 </html>

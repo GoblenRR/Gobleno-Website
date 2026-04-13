@@ -13,6 +13,9 @@ create table if not exists public.work_entries (
   link_url text,
   image_url text,
   image_alt text,
+  audio_url text,
+  audio_type text,
+  audio_size_bytes integer,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -20,6 +23,21 @@ create table if not exists public.work_entries (
 
 alter table public.work_entries
   add column if not exists link_url text;
+
+alter table public.work_entries
+  add column if not exists image_url text;
+
+alter table public.work_entries
+  add column if not exists image_alt text;
+
+alter table public.work_entries
+  add column if not exists audio_url text;
+
+alter table public.work_entries
+  add column if not exists audio_type text;
+
+alter table public.work_entries
+  add column if not exists audio_size_bytes integer;
 
 create index if not exists work_entries_section_sort_idx
   on public.work_entries (section, sort_order, created_at desc);

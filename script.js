@@ -6,57 +6,33 @@
     : "";
   const videosApiUrl = `${apiBaseUrl}/api/videos`;
   const workContentApiUrl = `${apiBaseUrl}/api/work-content`;
-  const workImageUploadApiUrl = `${apiBaseUrl}/api/dev/upload-image`;
+  const workAssetUploadApiUrl = `${apiBaseUrl}/api/dev/upload-image`;
   const devSessionApiUrl = `${apiBaseUrl}/api/dev/session`;
   const devLoginApiUrl = `${apiBaseUrl}/api/dev/login`;
   const devSessionStorageKey = "gobleno_dev_token";
   const contentSections = new Set(["music", "ui", "games", "extras"]);
+  const supportedAudioExtensions = new Set(["mp3", "wav", "ogg"]);
+  const supportedAudioMimeTypes = new Set([
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/wave",
+    "audio/x-wav",
+    "audio/vnd.wave",
+    "audio/ogg",
+    "application/ogg"
+  ]);
+  const maxAudioUploadBytes = 5 * 1024 * 1024;
   const currentHash = window.location.hash.replace("#", "").trim().toLowerCase();
   const shouldPlayStartupIntro = !currentHash || currentHash === "home";
+  const workEntriesBySection = new Map();
+  const devEntriesBySection = new Map();
 
   if (shouldPlayStartupIntro) {
     document.body.classList.add("play-startup-intro");
   }
 
   const routeApp = document.querySelector("[data-route-app]");
-  if (routeApp) {
-    const routePanels = Array.from(routeApp.querySelectorAll("[data-route-panel]"));
-    const routeTabs = Array.from(routeApp.querySelectorAll("[data-tab-for]"));
-    const validRoutes = new Set(routePanels.map((panel) => panel.dataset.routePanel));
-
-    const showPanel = (panel) => {
-      panel.hidden = false;
-      panel.setAttribute("aria-hidden", "false");
-    };
-
-    const hidePanel = (panel) => {
-      panel.hidden = true;
-      panel.setAttribute("aria-hidden", "true");
-    };
-
-    const applyRoute = () => {
-      const requestedRoute = window.location.hash.replace("#", "").trim().toLowerCase() || "home";
-      const nextRoute = validRoutes.has(requestedRoute) ? requestedRoute : "home";
-
-      routePanels.forEach((panel) => {
-        if (panel.dataset.routePanel === nextRoute) {
-          showPanel(panel);
-          return;
-        }
-
-        hidePanel(panel);
-      });
-
-      routeTabs.forEach((tab) => {
-        tab.classList.toggle("is-active", tab.dataset.tabFor === nextRoute);
-      });
-
-    };
-
-    window.addEventListener("hashchange", applyRoute);
-    applyRoute();
-  }
-
   const workSectionTriggers = Array.from(document.querySelectorAll("[data-work-section-trigger]"));
   const workSectionPanels = Array.from(document.querySelectorAll("[data-work-section-panel]"));
   const workContentBoards = new Map(
@@ -72,9 +48,17 @@
   const devEntryForm = document.querySelector("[data-dev-entry-form]");
   const devEntryListSection = document.querySelector("[data-dev-entry-list-section]");
   const devEntryList = document.querySelector("[data-dev-entry-list]");
+  const devEditState = document.querySelector("[data-dev-edit-state]");
+  const devEditLabel = document.querySelector("[data-dev-edit-label]");
+  const devSubmitLabel = document.querySelector("[data-dev-submit-label]");
+  const devCancelEdit = document.querySelector("[data-dev-cancel-edit]");
   const contactForm = document.querySelector("[data-contact-form]");
   const contactStatus = document.querySelector("[data-contact-status]");
   const devStatus = document.querySelector("[data-dev-status]");
+  const imagePreviewShell = document.querySelector("[data-image-preview]");
+  const imagePreviewImage = document.querySelector("[data-image-preview-image]");
+  const imagePreviewDialog = imagePreviewImage ? imagePreviewImage.parentElement : null;
+  let activeRoute = "";
   let activeWorkSection = "videos";
   let videosLoaded = false;
   let videosLoading = false;
@@ -94,6 +78,81 @@
     .replace(/'/g, "&#39;");
 
   const formatMultilineHtml = (value) => escapeHtml(value).replace(/\r?\n/g, "<br>");
+  const getFileExtension = (name) => {
+    const trimmed = String(name || "").trim().toLowerCase();
+    const parts = trimmed.split(".");
+    return parts.length > 1 ? parts.pop() || "" : "";
+  };
+
+  const normalizeAudioType = (audioType, fileName = "") => {
+    const normalizedType = String(audioType || "").trim().toLowerCase();
+    const extension = getFileExtension(fileName);
+
+    if (!normalizedType) {
+      return ({
+        mp3: "audio/mpeg",
+        wav: "audio/wav",
+        ogg: "audio/ogg"
+      }[extension] || "");
+    }
+
+    return normalizedType;
+  };
+
+  const isSupportedAudioType = (audioType, fileName = "") => {
+    const normalizedType = normalizeAudioType(audioType, fileName);
+    const extension = getFileExtension(fileName);
+
+    if (extension && !supportedAudioExtensions.has(extension)) {
+      return false;
+    }
+
+    if (!normalizedType) {
+      return Boolean(extension) && supportedAudioExtensions.has(extension);
+    }
+
+    return supportedAudioMimeTypes.has(normalizedType);
+  };
+
+  const validateAttachmentFile = (file) => {
+    if (!(file instanceof File) || !file.size) {
+      return { kind: "", audioType: "" };
+    }
+
+    if (String(file.type || "").startsWith("image/")) {
+      return { kind: "image", audioType: "" };
+    }
+
+    if (!isSupportedAudioType(file.type, file.name)) {
+      throw new Error("unsupported audio format");
+    }
+
+    if (file.size > maxAudioUploadBytes) {
+      throw new Error("audio file too large");
+    }
+
+    return {
+      kind: "audio",
+      audioType: normalizeAudioType(file.type, file.name)
+    };
+  };
+
+  const formatTime = (seconds) => {
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return "0:00";
+    }
+
+    const rounded = Math.floor(seconds);
+    const hours = Math.floor(rounded / 3600);
+    const minutes = Math.floor((rounded % 3600) / 60);
+    const remainder = rounded % 60;
+
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+    }
+
+    return `${minutes}:${String(remainder).padStart(2, "0")}`;
+  };
 
   const setDevStatus = (message, tone = "info") => {
     if (!devStatus) return;
@@ -152,34 +211,281 @@
   const openDevModal = () => {
     if (!devModal) return;
     devModal.hidden = false;
+    document.body.classList.add("dev-panel-open");
   };
 
   const closeDevModal = () => {
     if (!devModal) return;
     devModal.hidden = true;
+    document.body.classList.remove("dev-panel-open");
     setDevStatus("");
   };
 
+  const resetDevFormMediaState = () => {
+    if (!(devEntryForm instanceof HTMLFormElement)) return;
+
+    devEntryForm.dataset.currentImageUrl = "";
+    devEntryForm.dataset.currentImageAlt = "";
+    devEntryForm.dataset.currentAudioUrl = "";
+    devEntryForm.dataset.currentAudioType = "";
+    devEntryForm.dataset.currentAudioSizeBytes = "";
+    devEntryForm.dataset.originalSection = "";
+  };
+
+  const clearDevEditMode = (preferredSection = "") => {
+    if (!(devEntryForm instanceof HTMLFormElement)) return;
+
+    devEntryForm.reset();
+    resetDevFormMediaState();
+
+    const entryIdField = devEntryForm.querySelector('[name="entry_id"]');
+    const sectionField = devEntryForm.querySelector('[name="section"]');
+    const sortField = devEntryForm.querySelector('[name="sort_order"]');
+    const fileField = devEntryForm.querySelector('[name="attachment_file"]');
+
+    if (entryIdField instanceof HTMLInputElement) {
+      entryIdField.value = "";
+    }
+
+    if (sectionField instanceof HTMLSelectElement && preferredSection) {
+      sectionField.value = preferredSection;
+    }
+
+    if (sortField instanceof HTMLInputElement) {
+      sortField.value = "0";
+    }
+
+    if (fileField instanceof HTMLInputElement) {
+      fileField.value = "";
+    }
+
+    if (devEditState) {
+      devEditState.hidden = true;
+    }
+
+    if (devEditLabel) {
+      devEditLabel.textContent = "Updating existing entry";
+    }
+
+    if (devSubmitLabel) {
+      devSubmitLabel.textContent = "Add entry";
+    }
+
+    if (devCancelEdit) {
+      devCancelEdit.hidden = true;
+    }
+  };
+
+  const enterDevEditMode = (entry) => {
+    if (!(devEntryForm instanceof HTMLFormElement)) return;
+
+    const entryIdField = devEntryForm.querySelector('[name="entry_id"]');
+    const sectionField = devEntryForm.querySelector('[name="section"]');
+    const titleField = devEntryForm.querySelector('[name="title"]');
+    const bodyField = devEntryForm.querySelector('[name="body"]');
+    const linkField = devEntryForm.querySelector('[name="link_url"]');
+    const sortField = devEntryForm.querySelector('[name="sort_order"]');
+    const fileField = devEntryForm.querySelector('[name="attachment_file"]');
+
+    if (entryIdField instanceof HTMLInputElement) {
+      entryIdField.value = String(entry.id || "");
+    }
+
+    if (sectionField instanceof HTMLSelectElement) {
+      sectionField.value = String(entry.section || "music");
+    }
+
+    if (titleField instanceof HTMLInputElement) {
+      titleField.value = String(entry.title || "");
+    }
+
+    if (bodyField instanceof HTMLTextAreaElement) {
+      bodyField.value = String(entry.body || "");
+    }
+
+    if (linkField instanceof HTMLInputElement) {
+      linkField.value = String(entry.link_url || "");
+    }
+
+    if (sortField instanceof HTMLInputElement) {
+      sortField.value = String(Number(entry.sort_order || 0));
+    }
+
+    if (fileField instanceof HTMLInputElement) {
+      fileField.value = "";
+    }
+
+    devEntryForm.dataset.currentImageUrl = String(entry.image_url || "");
+    devEntryForm.dataset.currentImageAlt = String(entry.image_alt || entry.title || "Work image");
+    devEntryForm.dataset.currentAudioUrl = String(entry.audio_url || "");
+    devEntryForm.dataset.currentAudioType = String(entry.audio_type || "");
+    devEntryForm.dataset.currentAudioSizeBytes = String(entry.audio_size_bytes || "");
+    devEntryForm.dataset.originalSection = String(entry.section || "");
+
+    if (devEditState) {
+      devEditState.hidden = false;
+    }
+
+    if (devEditLabel) {
+      devEditLabel.textContent = entry.title
+        ? `Updating "${entry.title}"`
+        : "Updating existing entry";
+    }
+
+    if (devSubmitLabel) {
+      devSubmitLabel.textContent = "Save changes";
+    }
+
+    if (devCancelEdit) {
+      devCancelEdit.hidden = false;
+    }
+
+    if (devModal) {
+      devModal.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const closeImagePreview = () => {
+    if (!imagePreviewShell || !imagePreviewImage) return;
+
+    imagePreviewShell.hidden = true;
+    imagePreviewShell.classList.remove("is-visible");
+    document.body.classList.remove("image-preview-open");
+    imagePreviewImage.removeAttribute("src");
+    imagePreviewImage.alt = "";
+
+    if (imagePreviewDialog) {
+      imagePreviewDialog.classList.remove("is-loading", "is-error");
+    }
+  };
+
+  const openImagePreview = (src, alt = "") => {
+    if (!imagePreviewShell || !imagePreviewImage) return;
+
+    imagePreviewShell.hidden = false;
+    document.body.classList.add("image-preview-open");
+    imagePreviewImage.alt = alt;
+
+    if (imagePreviewDialog) {
+      imagePreviewDialog.classList.add("is-loading");
+      imagePreviewDialog.classList.remove("is-error");
+    }
+
+    imagePreviewImage.src = src;
+
+    window.requestAnimationFrame(() => {
+      imagePreviewShell.classList.add("is-visible");
+    });
+  };
+
+  const getImageFallbackLabel = (img) => {
+    const alt = String(img.getAttribute("alt") || "").trim();
+    return alt ? alt.charAt(0).toUpperCase() : "!";
+  };
+
+  const enhanceImages = (root = document) => {
+    const images = Array.from(root.querySelectorAll("img"));
+
+    images.forEach((img) => {
+      if (img.dataset.imageEnhanced === "true") return;
+      img.dataset.imageEnhanced = "true";
+
+      const shell = img.closest("[data-image-shell]") || img.parentElement;
+      if (!(shell instanceof HTMLElement)) return;
+
+      shell.classList.add("image-shell");
+
+      let loader = shell.querySelector(".image-shell__loader");
+      if (!(loader instanceof HTMLElement)) {
+        loader = document.createElement("span");
+        loader.className = "image-shell__loader";
+        loader.setAttribute("aria-hidden", "true");
+        loader.innerHTML = '<span class="image-shell__spinner"></span>';
+        shell.appendChild(loader);
+      }
+
+      let fallback = shell.querySelector(".image-shell__fallback");
+      if (!(fallback instanceof HTMLElement)) {
+        fallback = document.createElement("span");
+        fallback.className = "image-shell__fallback";
+        fallback.setAttribute("aria-hidden", "true");
+        fallback.textContent = getImageFallbackLabel(img);
+        shell.appendChild(fallback);
+      }
+
+      const markLoaded = () => {
+        shell.classList.remove("is-loading", "is-error");
+        shell.classList.add("is-loaded");
+      };
+
+      const markError = () => {
+        shell.classList.remove("is-loading", "is-loaded");
+        shell.classList.add("is-error");
+      };
+
+      shell.classList.add("is-loading");
+
+      if (img.complete) {
+        if (img.naturalWidth > 0) {
+          markLoaded();
+        } else {
+          markError();
+        }
+        return;
+      }
+
+      img.addEventListener("load", markLoaded, { once: true });
+      img.addEventListener("error", markError, { once: true });
+    });
+  };
+
+  const audioEntryMarkup = (entry) => `
+    <div class="audio-entry" data-audio-entry data-audio-src="${escapeHtml(entry.audio_url || "")}">
+      <button class="audio-entry__toggle" type="button" data-audio-toggle aria-label="Play audio">
+        <span class="audio-entry__icon audio-entry__icon--play" aria-hidden="true"></span>
+        <span class="audio-entry__icon audio-entry__icon--pause" aria-hidden="true"></span>
+      </button>
+      <div class="audio-entry__timeline" data-audio-timeline role="slider" aria-label="Audio timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+        <div class="audio-entry__progress" data-audio-progress></div>
+        <div class="audio-entry__playhead" data-audio-playhead></div>
+      </div>
+      <span class="audio-entry__time" data-audio-time>(0:00/0:00)</span>
+      <audio preload="metadata" src="${escapeHtml(entry.audio_url || "")}"></audio>
+    </div>
+  `;
+
   const workEntryCardMarkup = (entry) => {
-    const openTag = entry.link_url
-      ? `<a class="work-entry-card work-entry-card--linked" href="${escapeHtml(entry.link_url)}" target="_blank" rel="noreferrer">`
-      : `<article class="work-entry-card">`;
-    const closeTag = entry.link_url ? "</a>" : "</article>";
+    const hasImage = Boolean(entry.image_url);
+    const hasAudio = Boolean(entry.audio_url);
+    const imageAlt = entry.image_alt || entry.title || "Work image";
+
+    const mediaMarkup = hasAudio
+      ? `<div class="work-entry-card__audio">${audioEntryMarkup(entry)}</div>`
+      : (hasImage
+        ? `
+        <button
+          class="work-entry-card__media work-entry-card__media--button"
+          type="button"
+          data-image-preview-trigger="${escapeHtml(entry.image_url)}"
+          data-image-preview-alt="${escapeHtml(imageAlt)}"
+        >
+          <span class="work-entry-card__media-shell" data-image-shell>
+            <img src="${escapeHtml(entry.image_url)}" alt="${escapeHtml(imageAlt)}" loading="lazy">
+          </span>
+        </button>
+      `
+        : "");
 
     return `
-    ${openTag}
-      ${entry.image_url ? `
-      <div class="work-entry-card__media">
-        <img src="${escapeHtml(entry.image_url)}" alt="${escapeHtml(entry.image_alt || entry.title || "Work image")}" loading="lazy" onerror="this.closest('.work-entry-card__media').classList.add('is-broken'); this.remove();">
-      </div>
-      ` : ""}
-      <div class="work-entry-card__body">
-        ${entry.title ? `<h3 class="work-entry-card__title">${escapeHtml(entry.title)}</h3>` : ""}
-        ${entry.body ? `<p class="work-entry-card__copy">${formatMultilineHtml(entry.body)}</p>` : ""}
-        ${entry.link_url ? `<span class="work-entry-card__link">Open link</span>` : ""}
-      </div>
-    ${closeTag}
-  `;
+      <article class="work-entry-card ${entry.link_url ? "work-entry-card--linked" : ""}">
+        ${mediaMarkup}
+        <div class="work-entry-card__body">
+          ${entry.title ? `<h3 class="work-entry-card__title">${escapeHtml(entry.title)}</h3>` : ""}
+          ${entry.body ? `<p class="work-entry-card__copy">${formatMultilineHtml(entry.body)}</p>` : ""}
+          ${entry.link_url ? `<a class="work-entry-card__link" href="${escapeHtml(entry.link_url)}" target="_blank" rel="noreferrer">Open link</a>` : ""}
+        </div>
+      </article>
+    `;
   };
 
   const formatDevEntryPreview = (value, fallback = "untitled entry") => {
@@ -192,11 +498,13 @@
 
     if (message) {
       devEntryList.innerHTML = `<p class="dev-entry-list__status">${escapeHtml(message)}</p>`;
+      bindUiSounds(devEntryList);
       return;
     }
 
     if (!entries.length) {
       devEntryList.innerHTML = `<p class="dev-entry-list__status">No entries found in ${escapeHtml(sectionName)}.</p>`;
+      bindUiSounds(devEntryList);
       return;
     }
 
@@ -208,10 +516,10 @@
         ? `<p class="dev-entry-list__copy">${escapeHtml(description.length > 140 ? `${description.slice(0, 140)}...` : description)}</p>`
         : "";
       const meta = [
-        entryId ? `ID ${escapeHtml(entryId)}` : "ID missing",
         `Sort ${escapeHtml(Number(entry.sort_order || 0))}`,
         entry.link_url ? "Has link" : "",
-        entry.image_url ? "Has image" : ""
+        entry.image_url ? "Has image" : "",
+        entry.audio_url ? "Has audio" : ""
       ].filter(Boolean).join(" | ");
 
       return `
@@ -221,10 +529,143 @@
             <p class="dev-entry-list__meta">${meta}</p>
             ${previewText}
           </div>
-          <button class="dev-entry-list__delete" type="button" data-dev-delete-entry="${escapeHtml(entryId)}" data-dev-delete-section="${escapeHtml(sectionName)}">Delete</button>
+          <div class="dev-entry-list__actions">
+            <button class="dev-entry-list__edit" type="button" data-dev-edit-entry="${escapeHtml(entryId)}" data-dev-edit-section="${escapeHtml(sectionName)}">Edit</button>
+            <button class="dev-entry-list__delete" type="button" data-dev-delete-entry="${escapeHtml(entryId)}" data-dev-delete-section="${escapeHtml(sectionName)}">Delete</button>
+          </div>
         </article>
       `;
     }).join("");
+    bindUiSounds(devEntryList);
+  };
+
+  const initializeAudioEntries = (root = document) => {
+    const audioEntries = Array.from(root.querySelectorAll("[data-audio-entry]"));
+
+    audioEntries.forEach((entryNode) => {
+      if (!(entryNode instanceof HTMLElement) || entryNode.dataset.audioBound === "true") {
+        return;
+      }
+
+      entryNode.dataset.audioBound = "true";
+
+      const audio = entryNode.querySelector("audio");
+      const toggle = entryNode.querySelector("[data-audio-toggle]");
+      const timeline = entryNode.querySelector("[data-audio-timeline]");
+      const progress = entryNode.querySelector("[data-audio-progress]");
+      const playhead = entryNode.querySelector("[data-audio-playhead]");
+      const time = entryNode.querySelector("[data-audio-time]");
+
+      if (!(audio instanceof HTMLAudioElement)
+        || !(toggle instanceof HTMLButtonElement)
+        || !(timeline instanceof HTMLElement)
+        || !(progress instanceof HTMLElement)
+        || !(playhead instanceof HTMLElement)
+        || !(time instanceof HTMLElement)) {
+        return;
+      }
+
+      let dragging = false;
+
+      const updateVisuals = () => {
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        const currentTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+        const ratio = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+
+        progress.style.width = `${ratio * 100}%`;
+        playhead.style.left = `${ratio * 100}%`;
+        timeline.setAttribute("aria-valuenow", String(Math.round(ratio * 100)));
+        time.textContent = `(${formatTime(currentTime)}/${formatTime(duration)})`;
+        entryNode.classList.toggle("is-playing", !audio.paused);
+        toggle.setAttribute("aria-label", audio.paused ? "Play audio" : "Pause audio");
+      };
+
+      const seekToPointer = (clientX) => {
+        const rect = timeline.getBoundingClientRect();
+        if (!rect.width) return;
+
+        const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        if (!duration) return;
+
+        audio.currentTime = duration * ratio;
+        updateVisuals();
+      };
+
+      toggle.addEventListener("click", async () => {
+        try {
+          if (audio.paused) {
+            await audio.play();
+          } else {
+            audio.pause();
+          }
+        } catch (_error) {
+          // Ignore playback permission errors.
+        } finally {
+          updateVisuals();
+        }
+      });
+
+      timeline.addEventListener("pointerdown", (event) => {
+        dragging = true;
+        timeline.setPointerCapture(event.pointerId);
+        seekToPointer(event.clientX);
+      });
+
+      timeline.addEventListener("pointermove", (event) => {
+        if (!dragging) return;
+        seekToPointer(event.clientX);
+      });
+
+      timeline.addEventListener("pointerup", (event) => {
+        if (!dragging) return;
+        dragging = false;
+        timeline.releasePointerCapture(event.pointerId);
+        seekToPointer(event.clientX);
+      });
+
+      timeline.addEventListener("pointercancel", (event) => {
+        dragging = false;
+        if (timeline.hasPointerCapture(event.pointerId)) {
+          timeline.releasePointerCapture(event.pointerId);
+        }
+      });
+
+      timeline.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        if (!duration) return;
+
+        if (event.key === "Home") {
+          audio.currentTime = 0;
+        } else if (event.key === "End") {
+          audio.currentTime = duration;
+        } else {
+          const direction = event.key === "ArrowRight" ? 1 : -1;
+          audio.currentTime = Math.min(duration, Math.max(0, audio.currentTime + direction * 5));
+        }
+
+        updateVisuals();
+      });
+
+      audio.addEventListener("loadedmetadata", updateVisuals);
+      audio.addEventListener("timeupdate", () => {
+        if (!dragging) {
+          updateVisuals();
+        }
+      });
+      audio.addEventListener("play", updateVisuals);
+      audio.addEventListener("pause", updateVisuals);
+      audio.addEventListener("ended", updateVisuals);
+      audio.addEventListener("error", () => {
+        time.textContent = "(0:00/0:00)";
+        entryNode.classList.add("is-error");
+      });
+
+      updateVisuals();
+    });
   };
 
   const renderWorkSectionEntries = (sectionName, entries, fallbackMessage = "this section is empty") => {
@@ -234,6 +675,7 @@
 
     if (!entries.length) {
       board.innerHTML = `<p class="work-content-status work-empty-state">${escapeHtml(fallbackMessage)}</p>`;
+      bindUiSounds(board);
       return;
     }
 
@@ -242,6 +684,9 @@
         ${entries.map((entry) => workEntryCardMarkup(entry)).join("")}
       </div>
     `;
+    enhanceImages(board);
+    initializeAudioEntries(board);
+    bindUiSounds(board);
   };
 
   const apiRequest = async (url, options = {}) => {
@@ -275,17 +720,15 @@
     return payload;
   };
 
-  const uploadWorkImage = async (file, sectionName) => {
+  const uploadWorkAsset = async (file, sectionName) => {
     const uploadData = new FormData();
     uploadData.append("section", sectionName);
     uploadData.append("file", file);
 
-    const payload = await apiRequest(workImageUploadApiUrl, {
+    return apiRequest(workAssetUploadApiUrl, {
       method: "POST",
       body: uploadData
     });
-
-    return String(payload?.public_url || "");
   };
 
   const renderVideos = (videos) => {
@@ -300,13 +743,15 @@
     videosStatus.hidden = true;
     videosBoard.innerHTML = videos.map((video) => `
       <a class="video-card" href="${escapeHtml(video.url)}" target="_blank" rel="noreferrer">
-        <span class="video-card__thumb">
+        <span class="video-card__thumb" data-image-shell>
           <img src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)} thumbnail" loading="lazy">
         </span>
         <span class="video-card__title">${escapeHtml(video.title)}</span>
         <span class="video-card__meta">${escapeHtml(Number(video.viewCount || 0).toLocaleString())} views</span>
       </a>
     `).join("");
+    enhanceImages(videosBoard);
+    bindUiSounds(videosBoard);
   };
 
   async function loadVideos() {
@@ -336,8 +781,8 @@
     }
   }
 
-  async function loadWorkSectionContent(sectionName) {
-    if (!contentSections.has(sectionName) || loadedContentSections.has(sectionName) || loadingContentSections.has(sectionName)) return;
+  async function loadWorkSectionContent(sectionName, force = false) {
+    if (!contentSections.has(sectionName) || (!force && loadedContentSections.has(sectionName)) || loadingContentSections.has(sectionName)) return;
 
     const board = workContentBoards.get(sectionName);
 
@@ -350,6 +795,7 @@
       const payload = await apiRequest(`${workContentApiUrl}?section=${encodeURIComponent(sectionName)}`);
       const entries = Array.isArray(payload?.entries) ? payload.entries : [];
 
+      workEntriesBySection.set(sectionName, entries);
       loadedContentSections.add(sectionName);
       renderWorkSectionEntries(sectionName, entries);
     } catch (_error) {
@@ -359,8 +805,12 @@
     }
   }
 
-  async function loadDevEntries(sectionName) {
+  async function loadDevEntries(sectionName, force = false) {
     if (!devEntryList || !contentSections.has(sectionName)) return;
+    if (!force && devEntriesBySection.has(sectionName) && devEntriesLoadingSection !== sectionName) {
+      renderDevEntryList(sectionName, devEntriesBySection.get(sectionName) || []);
+      return;
+    }
 
     devEntriesLoadingSection = sectionName;
     renderDevEntryList(sectionName, [], "loading entries...");
@@ -371,6 +821,7 @@
 
       if (devEntriesLoadingSection !== sectionName) return;
 
+      devEntriesBySection.set(sectionName, entries);
       renderDevEntryList(sectionName, entries);
     } catch (_error) {
       if (devEntriesLoadingSection !== sectionName) return;
@@ -383,8 +834,6 @@
       const payload = await apiRequest(devSessionApiUrl);
       lastSessionDiagnostic = payload;
       isDevAuthenticated = Boolean(payload?.authenticated);
-
-      console.info("dev session check", payload);
 
       if (!isDevAuthenticated) {
         devSessionToken = "";
@@ -404,8 +853,79 @@
     syncDevUi();
 
     if (isDevAuthenticated && devEntryListSection instanceof HTMLSelectElement) {
-      loadDevEntries(devEntryListSection.value || "music");
+      loadDevEntries(devEntryListSection.value || "music", true);
     }
+  }
+
+  if (routeApp) {
+    const routePanels = Array.from(routeApp.querySelectorAll("[data-route-panel]"));
+    const routeTabs = Array.from(routeApp.querySelectorAll("[data-tab-for]"));
+    const validRoutes = new Set(routePanels.map((panel) => panel.dataset.routePanel));
+
+    const showPanel = (panel, immediate = false) => {
+      panel.hidden = false;
+      panel.setAttribute("aria-hidden", "false");
+      panel.classList.add("is-active");
+
+      if (immediate) {
+        panel.classList.add("is-current");
+        return;
+      }
+
+      panel.classList.remove("is-leaving");
+      panel.classList.add("is-entering");
+      window.requestAnimationFrame(() => {
+        panel.classList.add("is-current");
+        panel.classList.remove("is-entering");
+      });
+    };
+
+    const hidePanel = (panel) => {
+      panel.hidden = true;
+      panel.setAttribute("aria-hidden", "true");
+      panel.classList.remove("is-active", "is-current", "is-entering", "is-leaving");
+    };
+
+    const transitionToPanel = (nextPanel, nextRoute) => {
+      const currentPanel = routePanels.find((panel) => panel.dataset.routePanel === activeRoute);
+
+      routeTabs.forEach((tab) => {
+        tab.classList.toggle("is-active", tab.dataset.tabFor === nextRoute);
+      });
+
+      if (!currentPanel || currentPanel === nextPanel) {
+        routePanels.forEach((panel) => {
+          if (panel === nextPanel) {
+            showPanel(panel, true);
+          } else {
+            hidePanel(panel);
+          }
+        });
+        activeRoute = nextRoute;
+        return;
+      }
+
+      showPanel(nextPanel);
+      currentPanel.classList.add("is-leaving");
+      currentPanel.classList.remove("is-current");
+
+      window.setTimeout(() => {
+        hidePanel(currentPanel);
+      }, 220);
+
+      activeRoute = nextRoute;
+    };
+
+    const applyRoute = () => {
+      const requestedRoute = window.location.hash.replace("#", "").trim().toLowerCase() || "home";
+      const nextRoute = validRoutes.has(requestedRoute) ? requestedRoute : "home";
+      const nextPanel = routePanels.find((panel) => panel.dataset.routePanel === nextRoute);
+      if (!nextPanel) return;
+      transitionToPanel(nextPanel, nextRoute);
+    };
+
+    window.addEventListener("hashchange", applyRoute);
+    applyRoute();
   }
 
   const setActiveWorkSection = (sectionName) => {
@@ -454,16 +974,77 @@
     button.addEventListener("click", closeDevModal);
   });
 
-  if (devEntryListSection instanceof HTMLSelectElement) {
-    devEntryListSection.addEventListener("change", () => {
-      if (!isDevAuthenticated) return;
-      loadDevEntries(devEntryListSection.value || "music");
+  if (devCancelEdit) {
+    devCancelEdit.addEventListener("click", () => {
+      const currentSection = devEntryListSection instanceof HTMLSelectElement
+        ? devEntryListSection.value || "music"
+        : "music";
+      clearDevEditMode(currentSection);
+      setDevStatus("edit cancelled", "info");
     });
   }
 
+  if (devEntryListSection instanceof HTMLSelectElement) {
+    devEntryListSection.addEventListener("change", () => {
+      if (!isDevAuthenticated) return;
+      loadDevEntries(devEntryListSection.value || "music", true);
+    });
+  }
+
+  if (imagePreviewShell) {
+    imagePreviewShell.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.hasAttribute("data-image-preview-close") || target === imagePreviewShell) {
+        closeImagePreview();
+      }
+    });
+  }
+
+  if (imagePreviewDialog) {
+    imagePreviewDialog.addEventListener("click", (event) => {
+      if (event.target === imagePreviewDialog) {
+        closeImagePreview();
+      }
+    });
+  }
+
+  if (imagePreviewImage && imagePreviewDialog) {
+    imagePreviewImage.addEventListener("load", () => {
+      imagePreviewDialog.classList.remove("is-loading");
+    });
+
+    imagePreviewImage.addEventListener("error", () => {
+      imagePreviewDialog.classList.remove("is-loading");
+      imagePreviewDialog.classList.add("is-error");
+    });
+  }
+
+  window.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const previewTrigger = target.closest("[data-image-preview-trigger]");
+    if (!(previewTrigger instanceof HTMLElement)) return;
+
+    const src = String(previewTrigger.dataset.imagePreviewTrigger || "").trim();
+    if (!src) return;
+
+    const alt = String(previewTrigger.dataset.imagePreviewAlt || "Preview image");
+    openImagePreview(src, alt);
+  });
+
   window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && devModal && !devModal.hidden) {
-      closeDevModal();
+    if (event.key === "Escape") {
+      if (imagePreviewShell && !imagePreviewShell.hidden) {
+        closeImagePreview();
+        return;
+      }
+
+      if (devModal && !devModal.hidden) {
+        closeDevModal();
+      }
     }
   });
 
@@ -500,13 +1081,13 @@
         }
 
         devLoginForm.reset();
+        clearDevEditMode(devEntryListSection instanceof HTMLSelectElement ? devEntryListSection.value || "music" : "music");
         setDevStatus("developer controls unlocked", "success");
       } catch (error) {
         isDevAuthenticated = false;
         devSessionToken = "";
         window.localStorage.removeItem(devSessionStorageKey);
         syncDevUi();
-        console.error("dev login failed", error);
         setDevStatus(error instanceof Error ? error.message.replace(/_/g, " ") : "incorrect password", "error");
       }
     });
@@ -517,62 +1098,116 @@
       event.preventDefault();
 
       const formData = new FormData(devEntryForm);
-      const section = String(formData.get("section") || "");
-      const title = String(formData.get("title") || "");
-      const body = String(formData.get("body") || "");
-      const linkUrl = String(formData.get("link_url") || "");
-      const imageFile = formData.get("image_file");
+      const entryId = String(formData.get("entry_id") || "").trim();
+      const section = String(formData.get("section") || "").trim().toLowerCase();
+      const title = String(formData.get("title") || "").trim();
+      const body = String(formData.get("body") || "").trim();
+      const linkUrl = String(formData.get("link_url") || "").trim();
+      const attachmentFile = formData.get("attachment_file");
       const sortOrder = Number(formData.get("sort_order") || 0);
+      const originalSection = String(devEntryForm.dataset.originalSection || "").trim().toLowerCase();
 
-      setDevStatus("saving entry...", "info");
+      setDevStatus(entryId ? "saving changes..." : "saving entry...", "info");
 
       try {
-        let imageUrl = "";
+        let mediaPayload = {
+          image_url: devEntryForm.dataset.currentImageUrl || "",
+          image_alt: devEntryForm.dataset.currentImageAlt || "",
+          audio_url: devEntryForm.dataset.currentAudioUrl || "",
+          audio_type: devEntryForm.dataset.currentAudioType || "",
+          audio_size_bytes: Number(devEntryForm.dataset.currentAudioSizeBytes || 0) || null
+        };
 
-        if (imageFile instanceof File && imageFile.size > 0) {
-          setDevStatus("uploading image...", "info");
-          imageUrl = await uploadWorkImage(imageFile, section);
+        if (attachmentFile instanceof File && attachmentFile.size > 0) {
+          const attachment = validateAttachmentFile(attachmentFile);
+          setDevStatus("uploading attachment...", "info");
+          const uploadedAsset = await uploadWorkAsset(attachmentFile, section);
+
+          if (attachment.kind === "image" || uploadedAsset.kind === "image") {
+            mediaPayload = {
+              image_url: String(uploadedAsset.public_url || ""),
+              image_alt: title || mediaPayload.image_alt || "Work image",
+              audio_url: "",
+              audio_type: "",
+              audio_size_bytes: null
+            };
+          } else {
+            mediaPayload = {
+              image_url: "",
+              image_alt: "",
+              audio_url: String(uploadedAsset.public_url || ""),
+              audio_type: String(uploadedAsset.content_type || attachment.audioType || ""),
+              audio_size_bytes: Number(uploadedAsset.size_bytes || attachmentFile.size || 0) || null
+            };
+          }
         }
 
-        await apiRequest(workContentApiUrl, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify({
-            section,
-            title,
-            body,
-            link_url: linkUrl,
-            image_url: imageUrl,
-            sort_order: sortOrder
-          })
+        const payload = {
+          section,
+          title,
+          body,
+          link_url: linkUrl,
+          image_url: mediaPayload.image_url || "",
+          image_alt: mediaPayload.image_alt || "",
+          audio_url: mediaPayload.audio_url || "",
+          audio_type: mediaPayload.audio_type || "",
+          audio_size_bytes: mediaPayload.audio_size_bytes || 0,
+          sort_order: sortOrder
+        };
+
+        if (entryId) {
+          await apiRequest(`${workContentApiUrl}?id=${encodeURIComponent(entryId)}`, {
+            method: "PUT",
+            headers: {
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({ id: entryId, ...payload })
+          });
+        } else {
+          await apiRequest(workContentApiUrl, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const sectionsToRefresh = new Set([section]);
+        if (entryId && originalSection && originalSection !== section) {
+          sectionsToRefresh.add(originalSection);
+        }
+
+        sectionsToRefresh.forEach((sectionName) => {
+          loadedContentSections.delete(sectionName);
+          workEntriesBySection.delete(sectionName);
+          devEntriesBySection.delete(sectionName);
+
+          if (contentSections.has(sectionName)) {
+            renderWorkSectionEntries(sectionName, [], "loading...");
+          }
         });
 
-        loadedContentSections.delete(section);
-        renderWorkSectionEntries(section, [], "loading...");
-        setActiveWorkSection(section);
-        devEntryForm.reset();
-        const sectionField = devEntryForm.querySelector('[name="section"]');
-        const sortField = devEntryForm.querySelector('[name="sort_order"]');
-
-        if (sectionField instanceof HTMLSelectElement) {
-          sectionField.value = section;
+        if (activeWorkSection !== "videos" && sectionsToRefresh.has(activeWorkSection)) {
+          loadWorkSectionContent(activeWorkSection, true);
         }
 
-        if (sortField instanceof HTMLInputElement) {
-          sortField.value = "0";
+        const listSection = devEntryListSection instanceof HTMLSelectElement
+          ? devEntryListSection.value || "music"
+          : section;
+
+        if (sectionsToRefresh.has(listSection) || listSection === section) {
+          loadDevEntries(listSection, true);
         }
 
+        clearDevEditMode(section);
         if (devEntryListSection instanceof HTMLSelectElement) {
           devEntryListSection.value = section;
-          loadDevEntries(section);
         }
 
-        setDevStatus("entry added", "success");
+        setDevStatus(entryId ? "entry updated" : "entry added", "success");
       } catch (error) {
         const message = error instanceof Error ? error.message : "unable to save entry";
-        console.error("save entry failed", error);
         setDevStatus(message.replace(/_/g, " "), "error");
       }
     });
@@ -583,11 +1218,29 @@
       const target = event.target;
 
       if (!(target instanceof HTMLElement)) return;
+      if (!isDevAuthenticated) return;
+
+      const editButton = target.closest("[data-dev-edit-entry]");
+
+      if (editButton instanceof HTMLButtonElement) {
+        const entryId = String(editButton.dataset.devEditEntry || "").trim();
+        const section = String(editButton.dataset.devEditSection || "").trim().toLowerCase();
+        const sectionEntries = devEntriesBySection.get(section) || [];
+        const entry = sectionEntries.find((item) => String(item.id || "") === entryId);
+
+        if (!entry) {
+          setDevStatus("unable to load entry for editing", "error");
+          return;
+        }
+
+        enterDevEditMode(entry);
+        setDevStatus("edit mode ready", "info");
+        return;
+      }
 
       const deleteButton = target.closest("[data-dev-delete-entry]");
 
       if (!(deleteButton instanceof HTMLButtonElement)) return;
-      if (!isDevAuthenticated) return;
 
       const entryId = String(deleteButton.dataset.devDeleteEntry || "").trim();
       const section = String(
@@ -614,16 +1267,17 @@
         });
 
         loadedContentSections.delete(section);
+        workEntriesBySection.delete(section);
+        devEntriesBySection.delete(section);
         if (activeWorkSection === section) {
           renderWorkSectionEntries(section, [], "loading...");
-          setActiveWorkSection(section);
+          loadWorkSectionContent(section, true);
         }
 
-        await loadDevEntries(section);
+        await loadDevEntries(section, true);
         setDevStatus("entry deleted", "success");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error || "unable to delete entry");
-        console.error("delete entry failed", error);
         setDevStatus(message.replace(/_/g, " "), "error");
       } finally {
         deleteButton.disabled = false;
@@ -683,72 +1337,72 @@
   }
 
   refreshDevSession();
+  clearDevEditMode(devEntryListSection instanceof HTMLSelectElement ? devEntryListSection.value || "music" : "music");
 
-  const hoverTargets = Array.from(document.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark, .work-category-card, .dev-control-button, .dev-submit-button"));
+  const hoverAudio = new Audio("./hover-ui.mp3");
+  const pressAudio = new Audio("./button-down.mp3");
+  const releaseAudio = new Audio("./button-up.mp3");
+  let audioUnlocked = false;
+  hoverAudio.preload = "auto";
+  hoverAudio.volume = 1;
+  pressAudio.preload = "auto";
+  pressAudio.volume = 1;
+  releaseAudio.preload = "auto";
+  releaseAudio.volume = 1;
 
-  if (hoverTargets.length) {
-    const hoverAudio = new Audio("./hover-ui.mp3");
-    const pressAudio = new Audio("./button-down.mp3");
-    const releaseAudio = new Audio("./button-up.mp3");
-    let audioUnlocked = false;
-    hoverAudio.preload = "auto";
-    hoverAudio.volume = 1;
-    pressAudio.preload = "auto";
-    pressAudio.volume = 1;
-    releaseAudio.preload = "auto";
-    releaseAudio.volume = 1;
+  const unlockAudio = () => {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
 
-    const unlockAudio = () => {
-      if (audioUnlocked) return;
-      audioUnlocked = true;
+    [hoverAudio, pressAudio, releaseAudio].forEach((audio) => {
+      try {
+        const previousVolume = audio.volume;
+        audio.volume = 0;
+        const playback = audio.play();
 
-      [hoverAudio, pressAudio, releaseAudio].forEach((audio) => {
-        try {
-          const previousVolume = audio.volume;
-          audio.volume = 0;
-          const playback = audio.play();
-
-          if (playback && typeof playback.then === "function") {
-            playback.then(() => {
-              audio.pause();
-              audio.currentTime = 0;
-              audio.volume = previousVolume;
-            }).catch(() => {
-              audio.volume = previousVolume;
-              audioUnlocked = false;
-            });
-          } else {
+        if (playback && typeof playback.then === "function") {
+          playback.then(() => {
             audio.pause();
             audio.currentTime = 0;
             audio.volume = previousVolume;
-          }
-        } catch (_error) {
-          audioUnlocked = false;
-        }
-      });
-    };
-
-    const playUiSound = (audio) => {
-      if (!audioUnlocked) return;
-
-      try {
-        audio.pause();
-        audio.currentTime = 0;
-        const playback = audio.play();
-
-        if (playback && typeof playback.catch === "function") {
-          playback.catch(() => {});
+          }).catch(() => {
+            audio.volume = previousVolume;
+            audioUnlocked = false;
+          });
+        } else {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = previousVolume;
         }
       } catch (_error) {
-        // Ignore autoplay/interaction failures.
+        audioUnlocked = false;
       }
-    };
+    });
+  };
 
-    window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
-    window.addEventListener("keydown", unlockAudio, { once: true });
-    window.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
+  const playUiSound = (audio) => {
+    if (!audioUnlocked) return;
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      const playback = audio.play();
+
+      if (playback && typeof playback.catch === "function") {
+        playback.catch(() => {});
+      }
+    } catch (_error) {
+      // Ignore autoplay/interaction failures.
+    }
+  };
+
+  function bindUiSounds(root = document) {
+    const hoverTargets = Array.from(root.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark, .work-category-card, .dev-control-button, .dev-submit-button, .dev-entry-list__edit, .dev-entry-list__delete, .audio-entry__toggle"));
 
     hoverTargets.forEach((target) => {
+      if (!(target instanceof HTMLElement) || target.dataset.uiSoundBound === "true") return;
+      target.dataset.uiSoundBound = "true";
+
       let armed = true;
 
       target.addEventListener("pointerenter", () => {
@@ -784,6 +1438,13 @@
       });
     });
   }
+
+  window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
+  window.addEventListener("keydown", unlockAudio, { once: true });
+  window.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
+
+  bindUiSounds(document);
+  enhanceImages(document);
 
   const sparkLayer = document.querySelector("[data-click-spark-layer]");
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -935,6 +1596,7 @@
       ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=256`
       : getDefaultAvatarUrl(user);
     activeAvatarKey = avatarKey;
+    enhanceImages(discordCard);
   };
 
   const getDisplayName = (user) => user.display_name || user.global_name || user.username || "Gobleno";
@@ -1073,6 +1735,7 @@
     const presenceMarkup = createPresenceMarkup(data);
     presenceStackEl.innerHTML = presenceMarkup;
     presenceStackEl.hidden = !presenceMarkup.trim();
+    enhanceImages(presenceStackEl);
   };
 
   const clearHeartbeat = () => {
