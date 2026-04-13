@@ -200,12 +200,13 @@
 
     devEntryList.innerHTML = entries.map((entry) => {
       const title = formatDevEntryPreview(entry.title);
+      const entryId = entry?.id ? String(entry.id) : "";
       const description = String(entry.body || "").trim();
       const previewText = description
         ? `<p class="dev-entry-list__copy">${escapeHtml(description.length > 140 ? `${description.slice(0, 140)}...` : description)}</p>`
         : "";
       const meta = [
-        `ID ${escapeHtml(entry.id)}`,
+        entryId ? `ID ${escapeHtml(entryId)}` : "ID missing",
         `Sort ${escapeHtml(Number(entry.sort_order || 0))}`,
         entry.link_url ? "Has link" : "",
         entry.image_url ? "Has image" : ""
@@ -218,7 +219,7 @@
             <p class="dev-entry-list__meta">${meta}</p>
             ${previewText}
           </div>
-          <button class="dev-entry-list__delete" type="button" data-dev-delete-entry="${escapeHtml(entry.id)}" data-dev-delete-section="${escapeHtml(sectionName)}">Delete</button>
+          <button class="dev-entry-list__delete" type="button" data-dev-delete-entry="${escapeHtml(entryId)}" data-dev-delete-section="${escapeHtml(sectionName)}">Delete</button>
         </article>
       `;
     }).join("");
