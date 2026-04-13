@@ -72,6 +72,8 @@
   const devEntryForm = document.querySelector("[data-dev-entry-form]");
   const devEntryListSection = document.querySelector("[data-dev-entry-list-section]");
   const devEntryList = document.querySelector("[data-dev-entry-list]");
+  const contactForm = document.querySelector("[data-contact-form]");
+  const contactStatus = document.querySelector("[data-contact-status]");
   const devStatus = document.querySelector("[data-dev-status]");
   let activeWorkSection = "videos";
   let videosLoaded = false;
@@ -625,6 +627,56 @@
         setDevStatus(message.replace(/_/g, " "), "error");
       } finally {
         deleteButton.disabled = false;
+      }
+    });
+  }
+
+  if (contactForm) {
+    contactForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      if (!(contactForm instanceof HTMLFormElement)) return;
+
+      if (contactStatus) {
+        contactStatus.hidden = false;
+        contactStatus.textContent = "Sending message...";
+        contactStatus.classList.remove("is-success", "is-error");
+      }
+
+      const submitButton = contactForm.querySelector("button[type=\"submit\"]");
+      if (submitButton instanceof HTMLButtonElement) {
+        submitButton.disabled = true;
+      }
+
+      try {
+        const formData = new FormData(contactForm);
+        const response = await fetch(contactForm.action, {
+          method: "POST",
+          headers: {
+            Accept: "application/json"
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`form_submit_failed:${response.status}`);
+        }
+
+        contactForm.reset();
+        if (contactStatus) {
+          contactStatus.textContent = "Message sent. I’ll get back to you soon.";
+          contactStatus.classList.add("is-success");
+        }
+      } catch (error) {
+        console.error("contact form submit failed", error);
+        if (contactStatus) {
+          contactStatus.textContent = "Something went wrong. Please try again.";
+          contactStatus.classList.add("is-error");
+        }
+      } finally {
+        if (submitButton instanceof HTMLButtonElement) {
+          submitButton.disabled = false;
+        }
       }
     });
   }

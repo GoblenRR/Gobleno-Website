@@ -846,6 +846,26 @@ body.play-startup-intro .app-shell {
   box-shadow: 0 14px 24px rgba(220, 79, 18, 0.28);
 }
 
+.contact-status {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.72);
+  color: #6a5a4d;
+}
+
+.contact-status.is-success {
+  background: rgba(221, 245, 226, 0.92);
+  color: #21623a;
+}
+
+.contact-status.is-error {
+  background: rgba(255, 225, 220, 0.92);
+  color: #8b2f24;
+}
+
 .contact-field__input:focus {
   outline: none;
   border-color: rgba(255, 122, 58, 0.6);

@@ -222,8 +222,18 @@
             <div class="contact-shell">
               <div class="contact-card contact-card--intro">
                 <p class="contact-eyebrow">Let’s build something</p>
-                <h3 class="contact-title">Drop a note and I’ll get back to you.</h3>
-                <p class="contact-copy">Share a quick line about your idea, collab, or project and I’ll respond with next steps.</p>
+                <h3 class="contact-title">Tell me the details so I can respond fast.</h3>
+                <p class="contact-copy">Include the type of work, timeline, and anything you already have (brief, references, links). A few bullet points is perfect.</p>
+                <div class="contact-notes">
+                  <p>Helpful details to include:</p>
+                  <ul>
+                    <li>What you want made and the goal</li>
+                    <li>Deadline or desired launch date</li>
+                    <li>Budget range (if applicable)</li>
+                    <li>Links, assets, or references</li>
+                    <li>Best way + time to reach you</li>
+                  </ul>
+                </div>
                 <div class="contact-tags">
                   <span>Projects</span>
                   <span>Commission</span>
@@ -231,7 +241,7 @@
                 </div>
               </div>
 
-              <form class="contact-card contact-form" action="https://formspree.io/f/xzdypkql" method="POST">
+              <form class="contact-card contact-form" data-contact-form action="https://formspree.io/f/xzdypkql" method="POST">
                 <label class="contact-field">
                   <span class="contact-field__label">Contact</span>
                   <input class="contact-field__input" type="text" name="contact" placeholder="Email, Discord, or @handle" required>
@@ -243,6 +253,7 @@
                 </label>
 
                 <button class="action-button action-button--solid contact-submit" type="submit">Send message</button>
+                <p class="contact-status" data-contact-status hidden></p>
               </form>
             </div>
           </div>
