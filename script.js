@@ -590,10 +590,14 @@
       if (!isDevAuthenticated) return;
 
       const entryId = String(deleteButton.dataset.devDeleteEntry || "").trim();
-      const section = String(deleteButton.dataset.devDeleteSection || "");
+      const section = String(
+        deleteButton.dataset.devDeleteSection
+          || (devEntryListSection instanceof HTMLSelectElement ? devEntryListSection.value : "")
+          || ""
+      ).trim().toLowerCase();
 
       if (!entryId || !contentSections.has(section)) {
-        setDevStatus("unable to delete entry", "error");
+        setDevStatus(`unable to delete entry (id: ${entryId || "missing"}, section: ${section || "missing"})`, "error");
         return;
       }
 
@@ -618,7 +622,7 @@
         await loadDevEntries(section);
         setDevStatus("entry deleted", "success");
       } catch (error) {
-        const message = error instanceof Error ? error.message : "unable to delete entry";
+        const message = error instanceof Error ? error.message : String(error || "unable to delete entry");
         console.error("delete entry failed", error);
         setDevStatus(message.replace(/_/g, " "), "error");
       } finally {
