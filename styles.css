@@ -1033,6 +1033,7 @@ body.play-startup-intro .app-shell {
 .work-entry-card__media {
   aspect-ratio: 16 / 9;
   background: rgba(255, 238, 214, 0.88);
+  overflow: hidden;
 }
 
 .work-entry-card__media.is-broken {
