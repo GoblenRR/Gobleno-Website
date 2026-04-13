@@ -373,6 +373,10 @@
 
     imagePreviewImage.src = src;
 
+    if (imagePreviewImage.complete && imagePreviewImage.naturalWidth > 0 && imagePreviewDialog) {
+      imagePreviewDialog.classList.remove("is-loading", "is-error");
+    }
+
     window.requestAnimationFrame(() => {
       imagePreviewShell.classList.add("is-visible");
     });
@@ -1028,10 +1032,19 @@
     const previewTrigger = target.closest("[data-image-preview-trigger]");
     if (!(previewTrigger instanceof HTMLElement)) return;
 
-    const src = String(previewTrigger.dataset.imagePreviewTrigger || "").trim();
+    const sourceImage = previewTrigger.querySelector("img");
+    const src = String(
+      (sourceImage instanceof HTMLImageElement ? (sourceImage.currentSrc || sourceImage.src) : "")
+      || previewTrigger.dataset.imagePreviewTrigger
+      || ""
+    ).trim();
     if (!src) return;
 
-    const alt = String(previewTrigger.dataset.imagePreviewAlt || "Preview image");
+    const alt = String(
+      (sourceImage instanceof HTMLImageElement ? sourceImage.alt : "")
+      || previewTrigger.dataset.imagePreviewAlt
+      || "Preview image"
+    );
     openImagePreview(src, alt);
   });
 
