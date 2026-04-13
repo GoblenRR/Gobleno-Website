@@ -267,7 +267,7 @@
 
           <label class="dev-field">
             <span class="dev-field__label">URL</span>
-            <input class="dev-field__input" type="url" name="image_url" placeholder="https://...">
+            <input class="dev-field__input" type="url" name="link_url" placeholder="https://...">
           </label>
 
           <label class="dev-field">
@@ -287,6 +287,29 @@
 
           <button class="dev-submit-button" type="submit">Add entry</button>
         </form>
+
+        <section class="dev-entry-manager">
+          <div class="dev-entry-manager__header">
+            <div>
+              <p class="dev-entry-manager__eyebrow">Delete Entries</p>
+              <h3 class="dev-entry-manager__title">Remove existing work items</h3>
+            </div>
+
+            <label class="dev-field">
+              <span class="dev-field__label">View section</span>
+              <select class="dev-field__input" data-dev-entry-list-section>
+                <option value="music">Music</option>
+                <option value="ui">UI</option>
+                <option value="games">Games</option>
+                <option value="extras">Extras</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="dev-entry-list" data-dev-entry-list>
+            <p class="dev-entry-list__status">Select a section to load entries.</p>
+          </div>
+        </section>
       </section>
     </section>
   </div>

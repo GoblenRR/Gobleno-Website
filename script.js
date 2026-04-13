@@ -70,6 +70,8 @@
   const devLoginForm = document.querySelector("[data-dev-login-form]");
   const devAuthPanel = document.querySelector("[data-dev-auth-panel]");
   const devEntryForm = document.querySelector("[data-dev-entry-form]");
+  const devEntryListSection = document.querySelector("[data-dev-entry-list-section]");
+  const devEntryList = document.querySelector("[data-dev-entry-list]");
   const devStatus = document.querySelector("[data-dev-status]");
   let activeWorkSection = "videos";
   let videosLoaded = false;
@@ -80,6 +82,7 @@
   let devSessionToken = window.localStorage.getItem(devSessionStorageKey) || "";
   let lastSessionDiagnostic = null;
   let hasAttemptedDevLogin = false;
+  let devEntriesLoadingSection = "";
 
   const escapeHtml = (value) => String(value)
     .replace(/&/g, "&amp;")
@@ -155,19 +158,71 @@
     setDevStatus("");
   };
 
-  const workEntryCardMarkup = (entry) => `
-    <article class="work-entry-card">
+  const workEntryCardMarkup = (entry) => {
+    const openTag = entry.link_url
+      ? `<a class="work-entry-card work-entry-card--linked" href="${escapeHtml(entry.link_url)}" target="_blank" rel="noreferrer">`
+      : `<article class="work-entry-card">`;
+    const closeTag = entry.link_url ? "</a>" : "</article>";
+
+    return `
+    ${openTag}
       ${entry.image_url ? `
       <div class="work-entry-card__media">
-        <img src="${escapeHtml(entry.image_url)}" alt="${escapeHtml(entry.image_alt || entry.title || "Work image")}" loading="lazy">
+        <img src="${escapeHtml(entry.image_url)}" alt="${escapeHtml(entry.image_alt || entry.title || "Work image")}" loading="lazy" onerror="this.closest('.work-entry-card__media').classList.add('is-broken'); this.remove();">
       </div>
       ` : ""}
       <div class="work-entry-card__body">
         ${entry.title ? `<h3 class="work-entry-card__title">${escapeHtml(entry.title)}</h3>` : ""}
         ${entry.body ? `<p class="work-entry-card__copy">${formatMultilineHtml(entry.body)}</p>` : ""}
+        ${entry.link_url ? `<span class="work-entry-card__link">Open link</span>` : ""}
       </div>
-    </article>
+    ${closeTag}
   `;
+  };
+
+  const formatDevEntryPreview = (value, fallback = "untitled entry") => {
+    const trimmed = String(value || "").trim();
+    return trimmed ? escapeHtml(trimmed) : fallback;
+  };
+
+  const renderDevEntryList = (sectionName, entries, message = "") => {
+    if (!devEntryList) return;
+
+    if (message) {
+      devEntryList.innerHTML = `<p class="dev-entry-list__status">${escapeHtml(message)}</p>`;
+      return;
+    }
+
+    if (!entries.length) {
+      devEntryList.innerHTML = `<p class="dev-entry-list__status">No entries found in ${escapeHtml(sectionName)}.</p>`;
+      return;
+    }
+
+    devEntryList.innerHTML = entries.map((entry) => {
+      const title = formatDevEntryPreview(entry.title);
+      const description = String(entry.body || "").trim();
+      const previewText = description
+        ? `<p class="dev-entry-list__copy">${escapeHtml(description.length > 140 ? `${description.slice(0, 140)}...` : description)}</p>`
+        : "";
+      const meta = [
+        `ID ${escapeHtml(entry.id)}`,
+        `Sort ${escapeHtml(Number(entry.sort_order || 0))}`,
+        entry.link_url ? "Has link" : "",
+        entry.image_url ? "Has image" : ""
+      ].filter(Boolean).join(" | ");
+
+      return `
+        <article class="dev-entry-list__item">
+          <div>
+            <h4 class="dev-entry-list__title">${title}</h4>
+            <p class="dev-entry-list__meta">${meta}</p>
+            ${previewText}
+          </div>
+          <button class="dev-entry-list__delete" type="button" data-dev-delete-entry="${escapeHtml(entry.id)}" data-dev-delete-section="${escapeHtml(sectionName)}">Delete</button>
+        </article>
+      `;
+    }).join("");
+  };
 
   const renderWorkSectionEntries = (sectionName, entries, fallbackMessage = "this section is empty") => {
     const board = workContentBoards.get(sectionName);
@@ -301,6 +356,25 @@
     }
   }
 
+  async function loadDevEntries(sectionName) {
+    if (!devEntryList || !contentSections.has(sectionName)) return;
+
+    devEntriesLoadingSection = sectionName;
+    renderDevEntryList(sectionName, [], "loading entries...");
+
+    try {
+      const payload = await apiRequest(`${workContentApiUrl}?section=${encodeURIComponent(sectionName)}`);
+      const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+
+      if (devEntriesLoadingSection !== sectionName) return;
+
+      renderDevEntryList(sectionName, entries);
+    } catch (_error) {
+      if (devEntriesLoadingSection !== sectionName) return;
+      renderDevEntryList(sectionName, [], "unable to load entries right now");
+    }
+  }
+
   async function refreshDevSession() {
     try {
       const payload = await apiRequest(devSessionApiUrl);
@@ -325,6 +399,10 @@
     }
 
     syncDevUi();
+
+    if (isDevAuthenticated && devEntryListSection instanceof HTMLSelectElement) {
+      loadDevEntries(devEntryListSection.value || "music");
+    }
   }
 
   const setActiveWorkSection = (sectionName) => {
@@ -372,6 +450,13 @@
   devCloseButtons.forEach((button) => {
     button.addEventListener("click", closeDevModal);
   });
+
+  if (devEntryListSection instanceof HTMLSelectElement) {
+    devEntryListSection.addEventListener("change", () => {
+      if (!isDevAuthenticated) return;
+      loadDevEntries(devEntryListSection.value || "music");
+    });
+  }
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && devModal && !devModal.hidden) {
@@ -432,7 +517,7 @@
       const section = String(formData.get("section") || "");
       const title = String(formData.get("title") || "");
       const body = String(formData.get("body") || "");
-      const imageUrlInput = String(formData.get("image_url") || "");
+      const linkUrl = String(formData.get("link_url") || "");
       const imageFile = formData.get("image_file");
       const imageAlt = String(formData.get("image_alt") || "");
       const sortOrder = Number(formData.get("sort_order") || 0);
@@ -440,7 +525,7 @@
       setDevStatus("saving entry...", "info");
 
       try {
-        let imageUrl = imageUrlInput;
+        let imageUrl = "";
 
         if (imageFile instanceof File && imageFile.size > 0) {
           setDevStatus("uploading image...", "info");
@@ -456,6 +541,7 @@
             section,
             title,
             body,
+            link_url: linkUrl,
             image_url: imageUrl,
             image_alt: imageAlt,
             sort_order: sortOrder
@@ -477,11 +563,65 @@
           sortField.value = "0";
         }
 
+        if (devEntryListSection instanceof HTMLSelectElement) {
+          devEntryListSection.value = section;
+          loadDevEntries(section);
+        }
+
         setDevStatus("entry added", "success");
       } catch (error) {
         const message = error instanceof Error ? error.message : "unable to save entry";
         console.error("save entry failed", error);
         setDevStatus(message.replace(/_/g, " "), "error");
+      }
+    });
+  }
+
+  if (devEntryList) {
+    devEntryList.addEventListener("click", async (event) => {
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement)) return;
+
+      const deleteButton = target.closest("[data-dev-delete-entry]");
+
+      if (!(deleteButton instanceof HTMLButtonElement)) return;
+      if (!isDevAuthenticated) return;
+
+      const entryId = Number(deleteButton.dataset.devDeleteEntry || "");
+      const section = String(deleteButton.dataset.devDeleteSection || "");
+
+      if (!Number.isInteger(entryId) || entryId <= 0 || !contentSections.has(section)) {
+        setDevStatus("unable to delete entry", "error");
+        return;
+      }
+
+      const confirmed = window.confirm("Delete this work entry?");
+
+      if (!confirmed) return;
+
+      deleteButton.disabled = true;
+      setDevStatus("deleting entry...", "info");
+
+      try {
+        await apiRequest(`${workContentApiUrl}?id=${encodeURIComponent(entryId)}&section=${encodeURIComponent(section)}`, {
+          method: "DELETE"
+        });
+
+        loadedContentSections.delete(section);
+        if (activeWorkSection === section) {
+          renderWorkSectionEntries(section, [], "loading...");
+          setActiveWorkSection(section);
+        }
+
+        await loadDevEntries(section);
+        setDevStatus("entry deleted", "success");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unable to delete entry";
+        console.error("delete entry failed", error);
+        setDevStatus(message.replace(/_/g, " "), "error");
+      } finally {
+        deleteButton.disabled = false;
       }
     });
   }

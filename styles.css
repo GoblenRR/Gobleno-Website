@@ -903,9 +903,19 @@ body.play-startup-intro .app-shell {
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
+.work-entry-card--linked {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
 .work-entry-card__media {
   aspect-ratio: 16 / 9;
   background: rgba(255, 238, 214, 0.88);
+}
+
+.work-entry-card__media.is-broken {
+  display: none;
 }
 
 .work-entry-card__media img {
@@ -934,6 +944,22 @@ body.play-startup-intro .app-shell {
   font-size: 0.96rem;
   line-height: 1.6;
   color: #5d5145;
+}
+
+.work-entry-card__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(250, 236, 213, 0.92);
+  border: 2px solid rgba(164, 105, 46, 0.22);
+  color: #8f4a17;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .dev-modal-shell {
@@ -1032,6 +1058,96 @@ body.play-startup-intro .app-shell {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.dev-entry-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 2px solid rgba(182, 129, 69, 0.18);
+}
+
+.dev-entry-manager__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dev-entry-manager__header .dev-field {
+  min-width: 200px;
+}
+
+.dev-entry-manager__eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b46729;
+}
+
+.dev-entry-manager__title {
+  margin: 0;
+  font-size: 1rem;
+  color: #231d19;
+}
+
+.dev-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dev-entry-list__status {
+  margin: 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.66);
+  color: #6b5847;
+  font-weight: 700;
+}
+
+.dev-entry-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(182, 129, 69, 0.2);
+}
+
+.dev-entry-list__title {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #231d19;
+}
+
+.dev-entry-list__meta,
+.dev-entry-list__copy {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #6a5a4d;
+}
+
+.dev-entry-list__meta {
+  font-weight: 700;
+}
+
+.dev-entry-list__delete {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #7f201c 0%, #641612 100%);
+  color: #fff3e4;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .dev-auth-panel[hidden],
@@ -1260,9 +1376,18 @@ body.play-startup-intro .app-shell {
     padding: 20px;
   }
 
-  .dev-auth-panel__top {
-    flex-direction: column;
-    align-items: stretch;
+  .dev-entry-manager__header {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .dev-entry-manager__header .dev-field {
+    min-width: 0;
+  }
+
+  .dev-entry-list__item {
+    grid-template-columns: 1fr;
   }
 }
 

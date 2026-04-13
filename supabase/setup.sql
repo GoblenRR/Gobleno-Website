@@ -10,12 +10,16 @@ create table if not exists public.work_entries (
   section text not null check (section in ('music', 'ui', 'games', 'extras')),
   title text not null default '',
   body text not null default '',
+  link_url text,
   image_url text,
   image_alt text,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.work_entries
+  add column if not exists link_url text;
 
 create index if not exists work_entries_section_sort_idx
   on public.work_entries (section, sort_order, created_at desc);

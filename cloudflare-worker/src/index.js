@@ -13,7 +13,7 @@ function getOriginHeaders(request, includeCredentials = false) {
   const origin = request.headers.get("Origin");
   const headers = {
     "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
-    "access-control-allow-headers": "content-type"
+    "access-control-allow-headers": "authorization, content-type"
   };
 
   if (origin) {
@@ -331,6 +331,7 @@ function normalizeEntryPayload(payload) {
   const section = String(payload?.section || "").trim().toLowerCase();
   const title = String(payload?.title || "").trim();
   const body = String(payload?.body || "").trim();
+  const linkUrl = String(payload?.link_url || "").trim();
   const imageUrl = String(payload?.image_url || "").trim();
   const imageAlt = String(payload?.image_alt || "").trim();
   const sortOrder = Number(payload?.sort_order || 0);
@@ -343,6 +344,10 @@ function normalizeEntryPayload(payload) {
     throw new Error("content_required");
   }
 
+  if (linkUrl && !/^https?:\/\//i.test(linkUrl)) {
+    throw new Error("invalid_link_url");
+  }
+
   if (imageUrl && !/^https?:\/\//i.test(imageUrl)) {
     throw new Error("invalid_image_url");
   }
@@ -351,6 +356,7 @@ function normalizeEntryPayload(payload) {
     section,
     title,
     body,
+    link_url: linkUrl || null,
     image_url: imageUrl || null,
     image_alt: imageAlt || null,
     sort_order: Number.isFinite(sortOrder) ? sortOrder : 0
@@ -480,7 +486,7 @@ async function handleWorkContentGet(request, env) {
     return jsonResponse(request, { error: "invalid_section" }, { status: 400 });
   }
 
-  const query = `work_entries?section=eq.${encodeURIComponent(section)}&select=id,section,title,body,image_url,image_alt,sort_order,created_at,updated_at&order=sort_order.asc.nullslast,created_at.desc`;
+  const query = `work_entries?section=eq.${encodeURIComponent(section)}&select=id,section,title,body,link_url,image_url,image_alt,sort_order,created_at,updated_at&order=sort_order.asc.nullslast,created_at.desc,id.asc`;
   const entries = await supabaseRequest(env, query, {
     method: "GET",
     headers: {
@@ -513,6 +519,62 @@ async function handleWorkContentCreate(request, env) {
 
   return jsonResponse(request, { entry: createdEntries?.[0] || null }, {
     status: 201,
+    includeCredentials: true
+  });
+}
+
+async function handleWorkContentDelete(request, env) {
+  const authState = await inspectAuthSession(request, env);
+
+  if (!authState.authenticated) {
+    return jsonResponse(request, {
+      error: "unauthorized",
+      auth_reason: authState.reason,
+      auth_source: authState.source
+    }, { status: 401, includeCredentials: true });
+  }
+
+  const url = new URL(request.url);
+  const rawId = String(url.searchParams.get("id") || "").trim();
+  const section = String(url.searchParams.get("section") || "").trim().toLowerCase();
+  const entryId = Number(rawId);
+
+  if (!Number.isInteger(entryId) || entryId <= 0) {
+    return jsonResponse(request, { error: "invalid_entry_id" }, {
+      status: 400,
+      includeCredentials: true
+    });
+  }
+
+  if (!ALLOWED_CONTENT_SECTIONS.has(section)) {
+    return jsonResponse(request, { error: "invalid_section" }, {
+      status: 400,
+      includeCredentials: true
+    });
+  }
+
+  const deletedEntries = await supabaseRequest(
+    env,
+    `work_entries?id=eq.${encodeURIComponent(entryId)}&section=eq.${encodeURIComponent(section)}&select=id,section`,
+    {
+      method: "DELETE",
+      headers: {
+        Prefer: "return=representation"
+      }
+    }
+  );
+
+  if (!Array.isArray(deletedEntries) || !deletedEntries.length) {
+    return jsonResponse(request, { error: "entry_not_found" }, {
+      status: 404,
+      includeCredentials: true
+    });
+  }
+
+  return jsonResponse(request, {
+    deleted: true,
+    entry: deletedEntries[0]
+  }, {
     includeCredentials: true
   });
 }
@@ -572,6 +634,10 @@ export default {
 
       if (request.method === "POST" && url.pathname === "/api/work-content") {
         return handleWorkContentCreate(request, env);
+      }
+
+      if (request.method === "DELETE" && url.pathname === "/api/work-content") {
+        return handleWorkContentDelete(request, env);
       }
 
       if (request.method === "POST" && url.pathname === "/api/dev/upload-image") {
