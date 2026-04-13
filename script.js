@@ -588,10 +588,10 @@
       if (!(deleteButton instanceof HTMLButtonElement)) return;
       if (!isDevAuthenticated) return;
 
-      const entryId = Number(deleteButton.dataset.devDeleteEntry || "");
+      const entryId = String(deleteButton.dataset.devDeleteEntry || "").trim();
       const section = String(deleteButton.dataset.devDeleteSection || "");
 
-      if (!Number.isInteger(entryId) || entryId <= 0 || !contentSections.has(section)) {
+      if (!entryId || !contentSections.has(section)) {
         setDevStatus("unable to delete entry", "error");
         return;
       }

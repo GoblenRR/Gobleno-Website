@@ -537,9 +537,10 @@ async function handleWorkContentDelete(request, env) {
   const url = new URL(request.url);
   const rawId = String(url.searchParams.get("id") || "").trim();
   const section = String(url.searchParams.get("section") || "").trim().toLowerCase();
-  const entryId = Number(rawId);
+  const entryId = rawId;
+  const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entryId);
 
-  if (!Number.isInteger(entryId) || entryId <= 0) {
+  if (!isValidUuid) {
     return jsonResponse(request, { error: "invalid_entry_id" }, {
       status: 400,
       includeCredentials: true
