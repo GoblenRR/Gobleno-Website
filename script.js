@@ -520,7 +520,6 @@
       const body = String(formData.get("body") || "");
       const linkUrl = String(formData.get("link_url") || "");
       const imageFile = formData.get("image_file");
-      const imageAlt = String(formData.get("image_alt") || "");
       const sortOrder = Number(formData.get("sort_order") || 0);
 
       setDevStatus("saving entry...", "info");
@@ -544,7 +543,6 @@
             body,
             link_url: linkUrl,
             image_url: imageUrl,
-            image_alt: imageAlt,
             sort_order: sortOrder
           })
         });

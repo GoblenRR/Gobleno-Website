@@ -218,6 +218,21 @@
           <div class="panel-heading">
             <h2 class="panel-title">Contact</h2>
           </div>
+          <div class="contact-board">
+            <form class="contact-form" action="https://formspree.io/f/xzdypkql" method="POST">
+              <label class="contact-field">
+                <span class="contact-field__label">Contact</span>
+                <input class="contact-field__input" type="text" name="contact" placeholder="Email, Discord, or @handle" required>
+              </label>
+
+              <label class="contact-field">
+                <span class="contact-field__label">Message</span>
+                <textarea class="contact-field__input contact-field__input--textarea" name="message" placeholder="Write your message" required></textarea>
+              </label>
+
+              <button class="action-button action-button--solid contact-submit" type="submit">Send message</button>
+            </form>
+          </div>
         </section>
 
       </section>
@@ -273,11 +288,6 @@
           <label class="dev-field">
             <span class="dev-field__label">Image file</span>
             <input class="dev-field__input dev-field__input--file" type="file" name="image_file" accept="image/*">
-          </label>
-
-          <label class="dev-field">
-            <span class="dev-field__label">Alt text</span>
-            <input class="dev-field__input" type="text" name="image_alt" placeholder="Describe the image">
           </label>
 
           <label class="dev-field">

@@ -737,6 +737,55 @@ body.play-startup-intro .app-shell {
   margin-top: 28px;
 }
 
+.contact-board {
+  margin-top: 22px;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 2px solid rgba(255, 177, 103, 0.32);
+  box-shadow: 0 14px 24px rgba(112, 49, 8, 0.14);
+}
+
+.contact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-field__label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #7a5f4a;
+}
+
+.contact-field__input {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 2px solid rgba(182, 129, 69, 0.24);
+  background: rgba(255, 255, 255, 0.86);
+  font: inherit;
+  color: #231d19;
+}
+
+.contact-field__input--textarea {
+  min-height: 160px;
+  resize: vertical;
+}
+
+.contact-submit {
+  width: fit-content;
+  padding: 0 22px;
+  min-height: 54px;
+}
+
 .work-section-panel {
   min-height: 320px;
 }
