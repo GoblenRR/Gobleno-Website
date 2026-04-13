@@ -498,6 +498,8 @@ body.play-startup-intro .app-shell {
   position: relative;
   width: 108px;
   height: 108px;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .discord-avatar {
