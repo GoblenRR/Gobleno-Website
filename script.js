@@ -634,6 +634,7 @@
   if (contactForm) {
     contactForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      event.stopPropagation();
 
       if (!(contactForm instanceof HTMLFormElement)) return;
 
@@ -664,7 +665,7 @@
 
         contactForm.reset();
         if (contactStatus) {
-          contactStatus.textContent = "Message sent. I’ll get back to you soon.";
+          contactStatus.textContent = "Message sent.";
           contactStatus.classList.add("is-success");
         }
       } catch (error) {

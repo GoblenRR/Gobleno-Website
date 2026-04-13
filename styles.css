@@ -180,6 +180,7 @@ body.play-startup-intro::before {
 .bg-shape {
   background: linear-gradient(135deg, rgba(255, 139, 32, 0.95), rgba(244, 121, 20, 0.98));
   box-shadow: 0 30px 38px rgba(107, 46, 7, 0.45);
+  transform-origin: center;
 }
 
 .bg-shape::before {
@@ -199,7 +200,8 @@ body.play-startup-intro::before {
   top: 8%;
   left: 34%;
   border-radius: 30% 32% 28% 34%;
-  transform: rotate(40deg);
+  --spin: 40deg;
+  animation: floatBob 22s ease-in-out infinite;
 }
 
 .bg-shape-two {
@@ -210,7 +212,8 @@ body.play-startup-intro::before {
   bottom: -2%;
   left: 3%;
   border-radius: 28% 34% 30% 36%;
-  transform: rotate(34deg);
+  --spin: 34deg;
+  animation: floatBobAlt 18s ease-in-out infinite;
 }
 
 .bg-shape-three {
@@ -221,7 +224,8 @@ body.play-startup-intro::before {
   top: -8%;
   right: -2%;
   border-radius: 24% 30% 22% 36%;
-  transform: rotate(8deg);
+  --spin: 8deg;
+  animation: floatBobWide 26s ease-in-out infinite;
 }
 
 .bg-glow {
@@ -235,6 +239,47 @@ body.play-startup-intro::before {
     radial-gradient(circle at 72% 28%, rgba(255, 198, 92, 0.28), rgba(255, 198, 92, 0) 22%),
     radial-gradient(circle at 66% 76%, rgba(255, 151, 44, 0.22), rgba(255, 151, 44, 0) 26%);
   filter: blur(10px);
+  animation: glowDrift 30s ease-in-out infinite;
+}
+
+@keyframes floatBob {
+  0%,
+  100% {
+    transform: rotate(var(--spin)) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(calc(var(--spin) + 2deg)) translate3d(12px, -10px, 0);
+  }
+}
+
+@keyframes floatBobAlt {
+  0%,
+  100% {
+    transform: rotate(var(--spin)) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(calc(var(--spin) - 1deg)) translate3d(-10px, 12px, 0);
+  }
+}
+
+@keyframes floatBobWide {
+  0%,
+  100% {
+    transform: rotate(var(--spin)) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(calc(var(--spin) + 3deg)) translate3d(16px, 6px, 0);
+  }
+}
+
+@keyframes glowDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(18px, -12px, 0);
+  }
 }
 
 .app-shell {
@@ -838,12 +883,18 @@ body.play-startup-intro .app-shell {
 }
 
 .contact-submit {
-  align-self: flex-start;
   width: fit-content;
   padding: 0 28px;
   min-height: 56px;
   border-radius: 18px;
   box-shadow: 0 14px 24px rgba(220, 79, 18, 0.28);
+}
+
+.contact-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 .contact-status {

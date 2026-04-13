@@ -252,8 +252,10 @@
                   <textarea class="contact-field__input contact-field__input--textarea" name="message" placeholder="Write your message" required></textarea>
                 </label>
 
-                <button class="action-button action-button--solid contact-submit" type="submit">Send message</button>
-                <p class="contact-status" data-contact-status hidden></p>
+                <div class="contact-actions">
+                  <button class="action-button action-button--solid contact-submit" type="submit">Submit</button>
+                  <p class="contact-status" data-contact-status hidden aria-live="polite"></p>
+                </div>
               </form>
             </div>
           </div>
