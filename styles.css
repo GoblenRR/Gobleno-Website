@@ -377,43 +377,6 @@ body.play-startup-intro .app-shell {
 .app-topbar__actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.topbar-audio-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 46px;
-  padding: 0 14px;
-  border-radius: 16px;
-  border: 2px solid rgba(162, 73, 18, 0.24);
-  background: rgba(255, 247, 235, 0.92);
-  box-shadow: 0 3px 0 rgba(164, 105, 46, 0.12);
-}
-
-.topbar-audio-control[hidden] {
-  display: none !important;
-}
-
-.topbar-audio-control__icon {
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  color: #8f4a17;
-}
-
-.topbar-audio-control__slider {
-  width: 120px;
-  accent-color: #d95f1d;
-  cursor: pointer;
-}
-
-.topbar-audio-control__value {
-  min-width: 44px;
-  font-size: 0.86rem;
-  font-weight: 800;
-  color: #8f4a17;
 }
 
 .dev-control-button {
@@ -846,6 +809,65 @@ body.play-startup-intro .app-shell {
   flex-direction: column;
   gap: 10px;
   margin-bottom: 24px;
+}
+
+.panel-heading__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.work-audio-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 181, 116, 0.5);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 239, 216, 0.7)),
+    rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 16px 28px rgba(121, 54, 12, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(10px);
+}
+
+.work-audio-control[hidden] {
+  display: none !important;
+}
+
+.work-audio-control__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff8138 0%, #ea5f22 100%);
+  color: #fff8f2;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 18px rgba(182, 72, 19, 0.22);
+}
+
+.work-audio-control__slider {
+  width: 172px;
+  accent-color: #d95f1d;
+  cursor: pointer;
+}
+
+.work-audio-control__value {
+  min-width: 48px;
+  text-align: right;
+  font-size: 0.92rem;
+  font-weight: 900;
+  color: #7f3b10;
 }
 
 .panel-subtitle {
@@ -2230,17 +2252,20 @@ body.play-startup-intro .app-shell {
 }
 
 @media (max-width: 1024px) {
-  .app-topbar__actions {
-    gap: 8px;
+  .panel-heading__row {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 
-  .topbar-audio-control {
-    padding: 0 10px;
-    gap: 8px;
+  .work-audio-control {
+    width: 100%;
+    justify-content: space-between;
+    padding: 12px 14px;
+    gap: 10px;
   }
 
-  .topbar-audio-control__slider {
-    width: 88px;
+  .work-audio-control__slider {
+    width: min(100%, 180px);
   }
 
   .social-card__tile {
