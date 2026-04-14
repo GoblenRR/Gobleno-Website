@@ -19,6 +19,7 @@ const ALLOWED_AUDIO_MIME_TYPES = new Set([
   "application/ogg"
 ]);
 const BOT_USER_AGENT_PATTERN = /(bot|crawler|spider|slurp|bingpreview|headlesschrome|facebookexternalhit|python-requests|curl\/|wget\/|go-http-client|node-fetch|axios|okhttp|postmanruntime)/i;
+const PAGE_VIEW_DEDUPE_WINDOW_MS = 30 * 60 * 1000;
 
 const encoder = new TextEncoder();
 
@@ -61,6 +62,13 @@ function jsonResponse(request, payload, options = {}) {
       ...headers
     }
   });
+}
+
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(String(value || "")));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 async function fetchJson(url) {
@@ -651,6 +659,53 @@ function shouldSkipPageViewIncrement(request) {
   return BOT_USER_AGENT_PATTERN.test(userAgent);
 }
 
+async function getPageViewFingerprint(request) {
+  const ipAddress = String(
+    request.headers.get("cf-connecting-ip")
+    || request.headers.get("x-real-ip")
+    || ""
+  ).trim();
+  const userAgent = String(request.headers.get("user-agent") || "").trim().toLowerCase();
+  return sha256Hex(`${ipAddress}|${userAgent}`);
+}
+
+async function shouldCountPageView(env, request, nowMs) {
+  const fingerprint = await getPageViewFingerprint(request);
+  const visitorMetricKey = `page_view_visitor:${fingerprint}`;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const currentRow = await getSiteMetricRow(env, visitorMetricKey);
+
+    if (!currentRow) {
+      try {
+        const createdRow = await createSiteMetricRow(env, visitorMetricKey, nowMs);
+        if (createdRow) {
+          return true;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error || "");
+        if (!message.includes("supabase_request_failed:409")) {
+          throw error;
+        }
+      }
+
+      continue;
+    }
+
+    const lastSeenMs = Number(currentRow.metric_value || 0);
+    if (Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < PAGE_VIEW_DEDUPE_WINDOW_MS) {
+      return false;
+    }
+
+    const updatedRow = await compareAndSwapSiteMetric(env, visitorMetricKey, lastSeenMs, nowMs);
+    if (updatedRow) {
+      return true;
+    }
+  }
+
+  throw new Error("page_view_dedupe_conflict");
+}
+
 async function handlePageViewsRequest(request, env) {
   if (shouldSkipPageViewIncrement(request)) {
     const row = await getSiteMetricRow(env, "page_views");
@@ -664,14 +719,17 @@ async function handlePageViewsRequest(request, env) {
     });
   }
 
-  const row = await incrementSiteMetricWithoutRpc(env, "page_views");
+  const counted = await shouldCountPageView(env, request, Date.now());
+  const row = counted
+    ? await incrementSiteMetricWithoutRpc(env, "page_views")
+    : await getSiteMetricRow(env, "page_views");
   const value = Number(row?.metric_value);
 
   if (!Number.isFinite(value)) {
     throw new Error("page_views_invalid_value");
   }
 
-  return jsonResponse(request, { value, counted: true }, {
+  return jsonResponse(request, { value, counted }, {
     cacheControl: "no-store"
   });
 }
