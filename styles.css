@@ -821,16 +821,16 @@ body.play-startup-intro .app-shell {
 .work-audio-control {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  min-height: 52px;
-  padding: 0 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 181, 116, 0.5);
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 10px 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 181, 116, 0.38);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 239, 216, 0.7)),
-    rgba(255, 255, 255, 0.7);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 241, 221, 0.78)),
+    rgba(255, 255, 255, 0.74);
   box-shadow:
-    0 16px 28px rgba(121, 54, 12, 0.12),
+    0 12px 24px rgba(121, 54, 12, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.84);
   backdrop-filter: blur(10px);
 }
@@ -843,31 +843,91 @@ body.play-startup-intro .app-shell {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 62px;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
   background: linear-gradient(180deg, #ff8138 0%, #ea5f22 100%);
-  color: #fff8f2;
-  font-size: 0.74rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  box-shadow: 0 8px 18px rgba(182, 72, 19, 0.22);
+  box-shadow:
+    0 8px 18px rgba(182, 72, 19, 0.18),
+    inset 0 1px 0 rgba(255, 194, 146, 0.58);
+}
+
+.work-audio-control__badge svg {
+  width: 18px;
+  height: 18px;
+  stroke: #fff8f2;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
 }
 
 .work-audio-control__slider {
-  width: 172px;
-  accent-color: #d95f1d;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 158px;
+  height: 8px;
+  border-radius: 999px;
+  border: 0;
+  outline: none;
+  background:
+    linear-gradient(90deg,
+      #ff6d1f 0%,
+      #ff944f var(--volume-progress, 100%),
+      rgba(179, 129, 89, 0.18) var(--volume-progress, 100%),
+      rgba(179, 129, 89, 0.18) 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(93, 48, 16, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.46);
   cursor: pointer;
 }
 
+.work-audio-control__slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.work-audio-control__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -5px;
+  border-radius: 50%;
+  border: 2px solid #f06a28;
+  background: linear-gradient(180deg, #ffffff 0%, #fff1e3 100%);
+  box-shadow:
+    0 4px 10px rgba(121, 54, 12, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.work-audio-control__slider::-moz-range-track {
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.work-audio-control__slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #f06a28;
+  background: linear-gradient(180deg, #ffffff 0%, #fff1e3 100%);
+  box-shadow:
+    0 4px 10px rgba(121, 54, 12, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
 .work-audio-control__value {
-  min-width: 48px;
+  min-width: 42px;
   text-align: right;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   font-weight: 900;
-  color: #7f3b10;
+  color: #744013;
+  letter-spacing: -0.02em;
 }
 
 .panel-subtitle {
@@ -2253,19 +2313,16 @@ body.play-startup-intro .app-shell {
 
 @media (max-width: 1024px) {
   .panel-heading__row {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: center;
   }
 
   .work-audio-control {
-    width: 100%;
-    justify-content: space-between;
-    padding: 12px 14px;
+    padding: 6px 10px 6px 8px;
     gap: 10px;
   }
 
   .work-audio-control__slider {
-    width: min(100%, 180px);
+    width: 132px;
   }
 
   .social-card__tile {
@@ -2290,6 +2347,22 @@ body.play-startup-intro .app-shell {
     min-width: 0;
     min-height: 0;
     padding: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .panel-heading__row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .work-audio-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .work-audio-control__slider {
+    width: min(100%, 168px);
   }
 }
 

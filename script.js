@@ -161,7 +161,9 @@
 
   const syncTopbarAudioUi = () => {
     if (topbarAudioSlider instanceof HTMLInputElement) {
-      topbarAudioSlider.value = String(Math.round(audioEntryVolume * 100));
+      const percent = Math.round(audioEntryVolume * 100);
+      topbarAudioSlider.value = String(percent);
+      topbarAudioSlider.style.setProperty("--volume-progress", `${percent}%`);
     }
 
     if (topbarAudioValue) {
