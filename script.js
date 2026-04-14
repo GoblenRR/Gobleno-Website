@@ -55,6 +55,9 @@
   const contactForm = document.querySelector("[data-contact-form]");
   const contactStatus = document.querySelector("[data-contact-status]");
   const devStatus = document.querySelector("[data-dev-status]");
+  const topbarAudioControl = document.querySelector("[data-topbar-audio-control]");
+  const topbarAudioSlider = document.querySelector("[data-topbar-audio-slider]");
+  const topbarAudioValue = document.querySelector("[data-topbar-audio-value]");
   const imagePreviewShell = document.querySelector("[data-image-preview]");
   const imagePreviewStage = document.querySelector("[data-image-preview-stage]");
   const imagePreviewDialog = imagePreviewStage ? imagePreviewStage.parentElement : null;
@@ -70,6 +73,7 @@
   let hasAttemptedDevLogin = false;
   let devEntriesLoadingSection = "";
   let activeAudioEntry = null;
+  let audioEntryVolume = 1;
 
   const escapeHtml = (value) => String(value)
     .replace(/&/g, "&amp;")
@@ -153,6 +157,39 @@
     }
 
     return `${minutes}:${String(remainder).padStart(2, "0")}`;
+  };
+
+  const syncTopbarAudioUi = () => {
+    if (topbarAudioSlider instanceof HTMLInputElement) {
+      topbarAudioSlider.value = String(Math.round(audioEntryVolume * 100));
+    }
+
+    if (topbarAudioValue) {
+      topbarAudioValue.textContent = `${Math.round(audioEntryVolume * 100)}%`;
+    }
+  };
+
+  const applyAudioVolumeToEntries = (root = document) => {
+    const audioElements = Array.from(root.querySelectorAll("[data-audio-entry] audio"));
+    audioElements.forEach((audio) => {
+      if (audio instanceof HTMLAudioElement) {
+        audio.volume = audioEntryVolume;
+      }
+    });
+  };
+
+  const updateTopbarAudioVisibility = () => {
+    if (!(topbarAudioControl instanceof HTMLElement) || !routeApp) return;
+
+    const activePanel = routeApp.querySelector(`[data-route-panel="${activeRoute}"]`);
+    const scope = activePanel instanceof HTMLElement && activeRoute === "my-work"
+      ? activePanel.querySelector(`[data-work-section-panel="${activeWorkSection}"]`)
+      : activePanel;
+    const hasAudioEntry = scope instanceof HTMLElement && !scope.hidden
+      ? Boolean(scope.querySelector("[data-audio-entry]"))
+      : false;
+
+    topbarAudioControl.hidden = !hasAudioEntry;
   };
 
   const setDevStatus = (message, tone = "info") => {
@@ -611,6 +648,8 @@
         return;
       }
 
+      audio.volume = audioEntryVolume;
+
       let dragging = false;
 
       const stopActiveAudioEntry = () => {
@@ -748,6 +787,7 @@
 
     if (!entries.length) {
       board.innerHTML = `<p class="work-content-status work-empty-state">${escapeHtml(fallbackMessage)}</p>`;
+      updateTopbarAudioVisibility();
       bindUiSounds(board);
       return;
     }
@@ -759,6 +799,8 @@
     `;
     enhanceImages(board);
     initializeAudioEntries(board);
+    applyAudioVolumeToEntries(board);
+    updateTopbarAudioVisibility();
     bindUiSounds(board);
   };
 
@@ -975,6 +1017,7 @@
           }
         });
         activeRoute = nextRoute;
+        updateTopbarAudioVisibility();
         return;
       }
 
@@ -987,6 +1030,7 @@
       }, 220);
 
       activeRoute = nextRoute;
+      updateTopbarAudioVisibility();
     };
 
     const applyRoute = () => {
@@ -1015,6 +1059,8 @@
       panel.hidden = !isActive;
       panel.setAttribute("aria-hidden", String(!isActive));
     });
+
+    updateTopbarAudioVisibility();
 
     if (sectionName === "videos") {
       loadVideos();
@@ -1061,6 +1107,15 @@
     devEntryListSection.addEventListener("change", () => {
       if (!isDevAuthenticated) return;
       loadDevEntries(devEntryListSection.value || "music", true);
+    });
+  }
+
+  if (topbarAudioSlider instanceof HTMLInputElement) {
+    topbarAudioSlider.addEventListener("input", () => {
+      const nextValue = Math.min(100, Math.max(0, Number(topbarAudioSlider.value || 100)));
+      audioEntryVolume = nextValue / 100;
+      syncTopbarAudioUi();
+      applyAudioVolumeToEntries(document);
     });
   }
 
@@ -1515,6 +1570,9 @@
 
   bindUiSounds(document);
   enhanceImages(document);
+  syncTopbarAudioUi();
+  applyAudioVolumeToEntries(document);
+  updateTopbarAudioVisibility();
 
   const sparkLayer = document.querySelector("[data-click-spark-layer]");
   const shapeGridCanvas = document.querySelector("[data-shape-grid]");

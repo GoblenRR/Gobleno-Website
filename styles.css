@@ -377,6 +377,43 @@ body.play-startup-intro .app-shell {
 .app-topbar__actions {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.topbar-audio-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 2px solid rgba(162, 73, 18, 0.24);
+  background: rgba(255, 247, 235, 0.92);
+  box-shadow: 0 3px 0 rgba(164, 105, 46, 0.12);
+}
+
+.topbar-audio-control[hidden] {
+  display: none !important;
+}
+
+.topbar-audio-control__icon {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #8f4a17;
+}
+
+.topbar-audio-control__slider {
+  width: 120px;
+  accent-color: #d95f1d;
+  cursor: pointer;
+}
+
+.topbar-audio-control__value {
+  min-width: 44px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #8f4a17;
 }
 
 .dev-control-button {
@@ -2193,6 +2230,19 @@ body.play-startup-intro .app-shell {
 }
 
 @media (max-width: 1024px) {
+  .app-topbar__actions {
+    gap: 8px;
+  }
+
+  .topbar-audio-control {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .topbar-audio-control__slider {
+    width: 88px;
+  }
+
   .social-card__tile {
     width: 144px;
     height: 144px;

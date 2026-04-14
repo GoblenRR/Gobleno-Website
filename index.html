@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gobleno</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="styles.css?v=20260413-03">
+  <link rel="stylesheet" href="styles.css?v=20260413-04">
   <!-- Cloudflare Web Analytics -->
   <script
     defer
@@ -13,7 +13,7 @@
     data-cf-beacon='{"token":"49d5712aa2464770892adfdadf1d8731"}'
   ></script>
   <!-- End Cloudflare Web Analytics -->
-  <script src="script.js?v=20260413-03" defer></script>
+  <script src="script.js?v=20260413-04" defer></script>
 </head>
 <body class="page-shell">
   <div class="bg-shape bg-shape-one"></div>
@@ -41,6 +41,19 @@
           <h1 class="app-title">Gobleno</h1>
         </div>
         <div class="app-topbar__actions">
+          <label class="topbar-audio-control" data-topbar-audio-control hidden aria-label="Audio volume">
+            <span class="topbar-audio-control__icon" aria-hidden="true">VOL</span>
+            <input
+              class="topbar-audio-control__slider"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="100"
+              data-topbar-audio-slider
+            >
+            <span class="topbar-audio-control__value" data-topbar-audio-value>100%</span>
+          </label>
           <button class="dev-control-button" type="button" aria-label="Developer controls" data-dev-toggle>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.33 0-8 2.17-8 4.75V21h16v-2.25C20 16.17 16.33 14 12 14Z"></path>
