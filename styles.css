@@ -63,8 +63,10 @@ body {
   background:
     linear-gradient(145deg, rgba(255, 240, 200, 0.12), rgba(255, 255, 255, 0) 28%),
     linear-gradient(135deg, #7e3708 0%, #cf781f 42%, #f0ab3d 100%);
+  background-size: 140% 140%, 160% 160%;
   overflow-x: hidden;
   overflow-y: scroll;
+  animation: bodyGradientShift 22s ease-in-out infinite alternate;
 }
 
 body::before {
@@ -171,7 +173,9 @@ body.play-startup-intro::before {
 }
 
 .bg-shape,
-.bg-glow {
+.bg-glow,
+.bg-noise,
+.bg-rings {
   position: fixed;
   pointer-events: none;
   z-index: 0;
@@ -242,6 +246,37 @@ body.play-startup-intro::before {
   animation: glowDrift 30s ease-in-out infinite;
 }
 
+.bg-noise {
+  inset: 0;
+  opacity: 0.12;
+  mix-blend-mode: soft-light;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.4px),
+    radial-gradient(circle at 70% 32%, rgba(255, 219, 181, 0.9) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 42% 72%, rgba(130, 52, 8, 0.75) 0 1.1px, transparent 1.4px);
+  background-size: 28px 28px, 32px 32px, 24px 24px;
+  animation: noiseDrift 18s linear infinite;
+}
+
+.bg-rings {
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255, 219, 158, 0.24), rgba(255, 219, 158, 0) 18%),
+    radial-gradient(circle at 84% 18%, rgba(255, 136, 39, 0.18), rgba(255, 136, 39, 0) 17%),
+    radial-gradient(circle at 76% 78%, rgba(124, 47, 7, 0.18), rgba(124, 47, 7, 0) 22%);
+  filter: blur(3px);
+  animation: ringsDrift 24s ease-in-out infinite alternate;
+}
+
+@keyframes bodyGradientShift {
+  0% {
+    background-position: 0% 0%, 0% 10%;
+  }
+  100% {
+    background-position: 100% 14%, 100% 90%;
+  }
+}
+
 @keyframes floatBob {
   0%,
   100% {
@@ -279,6 +314,24 @@ body.play-startup-intro::before {
   }
   50% {
     transform: translate3d(18px, -12px, 0);
+  }
+}
+
+@keyframes noiseDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(-18px, 16px, 0) scale(1.04);
+  }
+}
+
+@keyframes ringsDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(14px, -20px, 0) scale(1.06);
   }
 }
 
@@ -2052,6 +2105,8 @@ body.play-startup-intro .app-shell {
 
 .image-preview-dialog {
   position: relative;
+  display: grid;
+  place-items: center;
   max-width: min(92vw, 1200px);
   max-height: min(90vh, 920px);
   border-radius: 30px;
@@ -2061,12 +2116,25 @@ body.play-startup-intro .app-shell {
   background: rgba(255, 248, 238, 0.82);
 }
 
+.image-preview-dialog__stage {
+  display: grid;
+  place-items: center;
+  max-width: min(92vw, 1200px);
+  max-height: min(90vh, 920px);
+  min-width: min(58vw, 420px);
+  min-height: min(58vh, 320px);
+  padding: 18px;
+}
+
 .image-preview-dialog__image {
   display: block;
   max-width: min(92vw, 1200px);
   max-height: min(90vh, 920px);
   width: auto;
   height: auto;
+  object-fit: contain;
+  border-radius: 22px;
+  box-shadow: 0 18px 36px rgba(52, 18, 4, 0.2);
 }
 
 .image-preview-dialog.is-loading::after,
@@ -2134,6 +2202,12 @@ body.play-startup-intro .app-shell {
 
   .dev-auth-panel {
     grid-template-columns: 1fr;
+  }
+
+  .image-preview-dialog__stage {
+    min-width: min(84vw, 420px);
+    min-height: min(48vh, 260px);
+    padding: 14px;
   }
 }
 

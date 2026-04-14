@@ -56,8 +56,8 @@
   const contactStatus = document.querySelector("[data-contact-status]");
   const devStatus = document.querySelector("[data-dev-status]");
   const imagePreviewShell = document.querySelector("[data-image-preview]");
-  const imagePreviewImage = document.querySelector("[data-image-preview-image]");
-  const imagePreviewDialog = imagePreviewImage ? imagePreviewImage.parentElement : null;
+  const imagePreviewStage = document.querySelector("[data-image-preview-stage]");
+  const imagePreviewDialog = imagePreviewStage ? imagePreviewStage.parentElement : null;
   let activeRoute = "";
   let activeWorkSection = "videos";
   let videosLoaded = false;
@@ -69,6 +69,7 @@
   let lastSessionDiagnostic = null;
   let hasAttemptedDevLogin = false;
   let devEntriesLoadingSection = "";
+  let activeAudioEntry = null;
 
   const escapeHtml = (value) => String(value)
     .replace(/&/g, "&amp;")
@@ -346,35 +347,76 @@
   };
 
   const closeImagePreview = () => {
-    if (!imagePreviewShell || !imagePreviewImage) return;
+    if (!imagePreviewShell || !imagePreviewStage) return;
 
     imagePreviewShell.hidden = true;
     imagePreviewShell.classList.remove("is-visible");
     document.body.classList.remove("image-preview-open");
-    imagePreviewImage.removeAttribute("src");
-    imagePreviewImage.alt = "";
+    imagePreviewStage.innerHTML = "";
 
     if (imagePreviewDialog) {
       imagePreviewDialog.classList.remove("is-loading", "is-error");
     }
   };
 
-  const openImagePreview = (src, alt = "") => {
-    if (!imagePreviewShell || !imagePreviewImage) return;
+  const openImagePreview = (sourceImage, fallbackSrc = "", fallbackAlt = "") => {
+    if (!imagePreviewShell || !imagePreviewStage) return;
+
+    const previewImage = sourceImage instanceof HTMLImageElement
+      ? sourceImage.cloneNode(true)
+      : document.createElement("img");
+    const src = String(
+      (sourceImage instanceof HTMLImageElement ? (sourceImage.currentSrc || sourceImage.src) : "")
+      || fallbackSrc
+      || ""
+    ).trim();
+    const alt = String(
+      (sourceImage instanceof HTMLImageElement ? sourceImage.alt : "")
+      || fallbackAlt
+      || "Preview image"
+    ).trim();
+
+    if (!src) return;
 
     imagePreviewShell.hidden = false;
     document.body.classList.add("image-preview-open");
-    imagePreviewImage.alt = alt;
+
+    previewImage.className = "image-preview-dialog__image";
+    previewImage.decoding = "async";
+    previewImage.loading = "eager";
+    previewImage.alt = alt;
+    previewImage.removeAttribute("width");
+    previewImage.removeAttribute("height");
+    previewImage.src = src;
+
+    imagePreviewStage.innerHTML = "";
+    imagePreviewStage.appendChild(previewImage);
 
     if (imagePreviewDialog) {
       imagePreviewDialog.classList.add("is-loading");
       imagePreviewDialog.classList.remove("is-error");
     }
 
-    imagePreviewImage.src = src;
-
-    if (imagePreviewImage.complete && imagePreviewImage.naturalWidth > 0 && imagePreviewDialog) {
+    const finishLoading = () => {
+      if (!imagePreviewDialog) return;
       imagePreviewDialog.classList.remove("is-loading", "is-error");
+    };
+
+    const failLoading = () => {
+      if (!imagePreviewDialog) return;
+      imagePreviewDialog.classList.remove("is-loading");
+      imagePreviewDialog.classList.add("is-error");
+    };
+
+    if (previewImage.complete) {
+      if (previewImage.naturalWidth > 0) {
+        finishLoading();
+      } else {
+        failLoading();
+      }
+    } else {
+      previewImage.addEventListener("load", finishLoading, { once: true });
+      previewImage.addEventListener("error", failLoading, { once: true });
     }
 
     window.requestAnimationFrame(() => {
@@ -571,6 +613,12 @@
 
       let dragging = false;
 
+      const stopActiveAudioEntry = () => {
+        if (!activeAudioEntry || activeAudioEntry === audio) return;
+        activeAudioEntry.pause();
+        activeAudioEntry.currentTime = 0;
+      };
+
       const updateVisuals = () => {
         const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
         const currentTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
@@ -599,9 +647,14 @@
       toggle.addEventListener("click", async () => {
         try {
           if (audio.paused) {
+            stopActiveAudioEntry();
             await audio.play();
+            activeAudioEntry = audio;
           } else {
             audio.pause();
+            if (activeAudioEntry === audio) {
+              activeAudioEntry = null;
+            }
           }
         } catch (_error) {
           // Ignore playback permission errors.
@@ -660,10 +713,26 @@
           updateVisuals();
         }
       });
-      audio.addEventListener("play", updateVisuals);
-      audio.addEventListener("pause", updateVisuals);
-      audio.addEventListener("ended", updateVisuals);
+      audio.addEventListener("play", () => {
+        activeAudioEntry = audio;
+        updateVisuals();
+      });
+      audio.addEventListener("pause", () => {
+        if (activeAudioEntry === audio) {
+          activeAudioEntry = null;
+        }
+        updateVisuals();
+      });
+      audio.addEventListener("ended", () => {
+        if (activeAudioEntry === audio) {
+          activeAudioEntry = null;
+        }
+        updateVisuals();
+      });
       audio.addEventListener("error", () => {
+        if (activeAudioEntry === audio) {
+          activeAudioEntry = null;
+        }
         time.textContent = "(0:00/0:00)";
         entryNode.classList.add("is-error");
       });
@@ -1014,17 +1083,6 @@
     });
   }
 
-  if (imagePreviewImage && imagePreviewDialog) {
-    imagePreviewImage.addEventListener("load", () => {
-      imagePreviewDialog.classList.remove("is-loading");
-    });
-
-    imagePreviewImage.addEventListener("error", () => {
-      imagePreviewDialog.classList.remove("is-loading");
-      imagePreviewDialog.classList.add("is-error");
-    });
-  }
-
   window.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -1040,12 +1098,11 @@
     ).trim();
     if (!src) return;
 
-    const alt = String(
-      (sourceImage instanceof HTMLImageElement ? sourceImage.alt : "")
-      || previewTrigger.dataset.imagePreviewAlt
-      || "Preview image"
+    openImagePreview(
+      sourceImage instanceof HTMLImageElement ? sourceImage : null,
+      src,
+      previewTrigger.dataset.imagePreviewAlt || "Preview image"
     );
-    openImagePreview(src, alt);
   });
 
   window.addEventListener("keydown", (event) => {
@@ -1494,10 +1551,9 @@
   const countUpElements = Array.from(document.querySelectorAll("[data-count-up]"));
 
   if (countUpElements.length) {
-    const animateCountUp = (element) => {
+    const animateCountUp = (element, targetValue) => {
       if (element.dataset.countAnimated === "true") return;
 
-      const targetValue = Number((element.dataset.countTarget || element.textContent || "0").replace(/,/g, ""));
       const duration = Number(element.dataset.countDuration || "1200");
 
       if (!Number.isFinite(targetValue)) return;
@@ -1522,19 +1578,55 @@
       window.requestAnimationFrame(step);
     };
 
-    if ("IntersectionObserver" in window) {
-      const countObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          animateCountUp(entry.target);
-          observer.unobserve(entry.target);
-        });
-      }, { threshold: 0.35 });
+    const prepareCountTargets = async () => {
+      await Promise.all(countUpElements.map(async (element) => {
+        const endpoint = String(element.dataset.countapiUrl || "").trim();
+        if (!endpoint) return;
 
-      countUpElements.forEach((element) => countObserver.observe(element));
-    } else {
-      countUpElements.forEach(animateCountUp);
-    }
+        try {
+          const response = await fetch(endpoint, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`countapi_failed:${response.status}`);
+          }
+
+          const payload = await response.json();
+          const value = Number(payload?.value);
+          if (!Number.isFinite(value)) {
+            throw new Error("countapi_invalid_value");
+          }
+
+          element.dataset.countTarget = String(value);
+          element.textContent = "0";
+        } catch (_error) {
+          element.dataset.countAnimated = "true";
+          element.textContent = "--";
+        }
+      }));
+    };
+
+    const startCountAnimations = () => {
+      if ("IntersectionObserver" in window) {
+        const countObserver = new IntersectionObserver((entries, observer) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const element = entry.target;
+            const targetValue = Number((element.dataset.countTarget || element.textContent || "0").replace(/,/g, ""));
+            animateCountUp(element, targetValue);
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: 0.35 });
+
+        countUpElements.forEach((element) => countObserver.observe(element));
+        return;
+      }
+
+      countUpElements.forEach((element) => {
+        const targetValue = Number((element.dataset.countTarget || element.textContent || "0").replace(/,/g, ""));
+        animateCountUp(element, targetValue);
+      });
+    };
+
+    prepareCountTargets().finally(startCountAnimations);
   }
 
   const depthCards = Array.from(document.querySelectorAll("[data-depth-card]"));
