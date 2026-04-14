@@ -31,6 +31,7 @@ Cloudflare Worker setup for Gobleno site APIs
    wrangler deploy
 
 11. Test it:
+   https://gobleno.co.uk/api/page-views
    https://gobleno.co.uk/api/videos
    https://gobleno.co.uk/api/work-content?section=music
    https://gobleno.co.uk/api/work-content?section=ui

@@ -1979,6 +1979,7 @@ body.play-startup-intro .app-shell {
   background: #fff;
   color: #d95f1d;
   cursor: pointer;
+  touch-action: manipulation;
   box-shadow: 0 8px 18px rgba(105, 37, 8, 0.2);
 }
 
@@ -2018,10 +2019,12 @@ body.play-startup-intro .app-shell {
 .audio-entry__timeline {
   position: relative;
   height: 12px;
+  min-width: 0;
   border: 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.34);
   cursor: pointer;
+  touch-action: none;
 }
 
 .audio-entry__progress {
@@ -2394,15 +2397,37 @@ body.play-startup-intro .app-shell {
     font-size: 1.08rem;
   }
 
+  .work-entry-card {
+    overflow: visible;
+  }
+
+  .work-entry-card__audio {
+    padding: 16px 16px 0;
+  }
+
   .audio-entry {
-    grid-template-columns: auto 1fr;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 48px minmax(0, 1fr);
     row-gap: 10px;
-    padding-right: 14px;
+    column-gap: 12px;
+    padding: 12px 14px 12px 10px;
+    border-radius: 28px;
+  }
+
+  .audio-entry__toggle {
+    width: 48px;
+    height: 48px;
+  }
+
+  .audio-entry__timeline {
+    width: 100%;
   }
 
   .audio-entry__time {
     grid-column: 1 / -1;
     justify-self: end;
+    font-size: 0.95rem;
   }
 
   .dev-modal {

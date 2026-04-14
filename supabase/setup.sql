@@ -21,6 +21,12 @@ create table if not exists public.work_entries (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.site_metrics (
+  metric_key text primary key,
+  metric_value bigint not null default 0,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.work_entries
   add column if not exists link_url text;
 
@@ -52,6 +58,16 @@ begin
 end;
 $$;
 
+create or replace function public.set_site_metrics_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
 drop trigger if exists trg_work_entries_updated_at on public.work_entries;
 
 create trigger trg_work_entries_updated_at
@@ -59,9 +75,18 @@ before update on public.work_entries
 for each row
 execute function public.set_work_entries_updated_at();
 
+drop trigger if exists trg_site_metrics_updated_at on public.site_metrics;
+
+create trigger trg_site_metrics_updated_at
+before update on public.site_metrics
+for each row
+execute function public.set_site_metrics_updated_at();
+
 alter table public.work_entries enable row level security;
+alter table public.site_metrics enable row level security;
 
 drop policy if exists "No direct anonymous access to work_entries" on public.work_entries;
+drop policy if exists "No direct anonymous access to site_metrics" on public.site_metrics;
 
 create policy "No direct anonymous access to work_entries"
 on public.work_entries
@@ -69,6 +94,35 @@ for all
 to anon, authenticated
 using (false)
 with check (false);
+
+create policy "No direct anonymous access to site_metrics"
+on public.site_metrics
+for all
+to anon, authenticated
+using (false)
+with check (false);
+
+create or replace function public.increment_site_metric(target_key text, increment_amount bigint default 1)
+returns table (metric_key text, metric_value bigint, updated_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  safe_increment bigint := greatest(coalesce(increment_amount, 1), 0);
+begin
+  insert into public.site_metrics (metric_key, metric_value)
+  values (target_key, safe_increment)
+  on conflict (metric_key) do update
+  set metric_value = public.site_metrics.metric_value + safe_increment,
+      updated_at = now();
+
+  return query
+  select sm.metric_key, sm.metric_value, sm.updated_at
+  from public.site_metrics sm
+  where sm.metric_key = target_key;
+end;
+$$;
 
 create or replace function public.storage_object_name_from_public_url(asset_url text, expected_bucket text default 'work-images')
 returns text

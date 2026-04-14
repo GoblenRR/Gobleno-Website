@@ -560,6 +560,27 @@ async function handleVideosRequest(request, env) {
   });
 }
 
+async function handlePageViewsRequest(request, env) {
+  const metric = await supabaseRequest(env, "rpc/increment_site_metric", {
+    method: "POST",
+    body: JSON.stringify({
+      target_key: "page_views",
+      increment_amount: 1
+    })
+  });
+
+  const row = Array.isArray(metric) ? metric[0] : metric;
+  const value = Number(row?.metric_value);
+
+  if (!Number.isFinite(value)) {
+    throw new Error("page_views_invalid_value");
+  }
+
+  return jsonResponse(request, { value }, {
+    cacheControl: "no-store"
+  });
+}
+
 async function handleWorkContentGet(request, env) {
   const url = new URL(request.url);
   const section = String(url.searchParams.get("section") || "").trim().toLowerCase();
@@ -759,6 +780,10 @@ export default {
     }
 
     try {
+      if (request.method === "GET" && url.pathname === "/api/page-views") {
+        return handlePageViewsRequest(request, env);
+      }
+
       if (request.method === "GET" && url.pathname === "/api/videos") {
         return handleVideosRequest(request, env);
       }

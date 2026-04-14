@@ -61,6 +61,10 @@
   const imagePreviewShell = document.querySelector("[data-image-preview]");
   const imagePreviewStage = document.querySelector("[data-image-preview-stage]");
   const imagePreviewDialog = imagePreviewStage ? imagePreviewStage.parentElement : null;
+  const isMobileDevice = Boolean(
+    window.matchMedia("(hover: none), (pointer: coarse)").matches
+    || /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent)
+  );
   let activeRoute = "";
   let activeWorkSection = "videos";
   let videosLoaded = false;
@@ -1469,6 +1473,7 @@
   const hoverAudio = new Audio("./hover-ui.mp3");
   const pressAudio = new Audio("./button-down.mp3");
   const releaseAudio = new Audio("./button-up.mp3");
+  const uiSoundsEnabled = !isMobileDevice;
   let audioUnlocked = false;
   hoverAudio.preload = "auto";
   hoverAudio.volume = 1;
@@ -1478,6 +1483,7 @@
   releaseAudio.volume = 1;
 
   const unlockAudio = () => {
+    if (!uiSoundsEnabled) return;
     if (audioUnlocked) return;
     audioUnlocked = true;
 
@@ -1508,6 +1514,7 @@
   };
 
   const playUiSound = (audio) => {
+    if (!uiSoundsEnabled) return;
     if (!audioUnlocked) return;
 
     try {
@@ -1524,6 +1531,7 @@
   };
 
   function bindUiSounds(root = document) {
+    if (!uiSoundsEnabled) return;
     const hoverTargets = Array.from(root.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark, .work-category-card, .dev-control-button, .dev-submit-button, .dev-entry-list__edit, .dev-entry-list__delete, .audio-entry__toggle"));
 
     hoverTargets.forEach((target) => {
@@ -1566,9 +1574,11 @@
     });
   }
 
-  window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
-  window.addEventListener("keydown", unlockAudio, { once: true });
-  window.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
+  if (uiSoundsEnabled) {
+    window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+    window.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
+  }
 
   bindUiSounds(document);
   enhanceImages(document);
