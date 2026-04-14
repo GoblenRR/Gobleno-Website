@@ -18,6 +18,7 @@ const ALLOWED_AUDIO_MIME_TYPES = new Set([
   "audio/ogg",
   "application/ogg"
 ]);
+const BOT_USER_AGENT_PATTERN = /(bot|crawler|spider|slurp|bingpreview|headlesschrome|facebookexternalhit|python-requests|curl\/|wget\/|go-http-client|node-fetch|axios|okhttp|postmanruntime)/i;
 
 const encoder = new TextEncoder();
 
@@ -560,23 +561,117 @@ async function handleVideosRequest(request, env) {
   });
 }
 
-async function handlePageViewsRequest(request, env) {
-  const metric = await supabaseRequest(env, "rpc/increment_site_metric", {
+async function getSiteMetricRow(env, metricKey) {
+  const rows = await supabaseRequest(
+    env,
+    `site_metrics?metric_key=eq.${encodeURIComponent(metricKey)}&select=metric_key,metric_value,updated_at`,
+    {
+      method: "GET",
+      headers: {
+        Prefer: "count=exact"
+      }
+    }
+  );
+
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function createSiteMetricRow(env, metricKey, metricValue) {
+  const rows = await supabaseRequest(env, "site_metrics", {
     method: "POST",
+    headers: {
+      Prefer: "return=representation"
+    },
     body: JSON.stringify({
-      target_key: "page_views",
-      increment_amount: 1
+      metric_key: metricKey,
+      metric_value: metricValue
     })
   });
 
-  const row = Array.isArray(metric) ? metric[0] : metric;
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function compareAndSwapSiteMetric(env, metricKey, currentValue, nextValue) {
+  const rows = await supabaseRequest(
+    env,
+    `site_metrics?metric_key=eq.${encodeURIComponent(metricKey)}&metric_value=eq.${encodeURIComponent(String(currentValue))}&select=metric_key,metric_value,updated_at`,
+    {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        metric_value: nextValue
+      })
+    }
+  );
+
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function incrementSiteMetricWithoutRpc(env, metricKey) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const currentRow = await getSiteMetricRow(env, metricKey);
+
+    if (!currentRow) {
+      try {
+        const createdRow = await createSiteMetricRow(env, metricKey, 1);
+        if (createdRow) {
+          return createdRow;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error || "");
+        if (!message.includes("supabase_request_failed:409")) {
+          throw error;
+        }
+      }
+
+      continue;
+    }
+
+    const currentValue = Number(currentRow.metric_value || 0);
+    const nextValue = currentValue + 1;
+    const updatedRow = await compareAndSwapSiteMetric(env, metricKey, currentValue, nextValue);
+
+    if (updatedRow) {
+      return updatedRow;
+    }
+  }
+
+  throw new Error("site_metric_update_conflict");
+}
+
+function shouldSkipPageViewIncrement(request) {
+  const verifiedBotCategory = String(request.cf?.verifiedBotCategory || "").trim();
+  if (verifiedBotCategory) {
+    return true;
+  }
+
+  const userAgent = String(request.headers.get("user-agent") || "").trim();
+  return BOT_USER_AGENT_PATTERN.test(userAgent);
+}
+
+async function handlePageViewsRequest(request, env) {
+  if (shouldSkipPageViewIncrement(request)) {
+    const row = await getSiteMetricRow(env, "page_views");
+    const value = Number(row?.metric_value || 0);
+
+    return jsonResponse(request, {
+      value: Number.isFinite(value) ? value : 0,
+      counted: false
+    }, {
+      cacheControl: "no-store"
+    });
+  }
+
+  const row = await incrementSiteMetricWithoutRpc(env, "page_views");
   const value = Number(row?.metric_value);
 
   if (!Number.isFinite(value)) {
     throw new Error("page_views_invalid_value");
   }
 
-  return jsonResponse(request, { value }, {
+  return jsonResponse(request, { value, counted: true }, {
     cacheControl: "no-store"
   });
 }
@@ -781,39 +876,39 @@ export default {
 
     try {
       if (request.method === "GET" && url.pathname === "/api/page-views") {
-        return handlePageViewsRequest(request, env);
+        return await handlePageViewsRequest(request, env);
       }
 
       if (request.method === "GET" && url.pathname === "/api/videos") {
-        return handleVideosRequest(request, env);
+        return await handleVideosRequest(request, env);
       }
 
       if (request.method === "GET" && url.pathname === "/api/work-content") {
-        return handleWorkContentGet(request, env);
+        return await handleWorkContentGet(request, env);
       }
 
       if (request.method === "POST" && url.pathname === "/api/work-content") {
-        return handleWorkContentCreate(request, env);
+        return await handleWorkContentCreate(request, env);
       }
 
       if (request.method === "PUT" && url.pathname === "/api/work-content") {
-        return handleWorkContentUpdate(request, env);
+        return await handleWorkContentUpdate(request, env);
       }
 
       if (request.method === "DELETE" && url.pathname === "/api/work-content") {
-        return handleWorkContentDelete(request, env);
+        return await handleWorkContentDelete(request, env);
       }
 
       if (request.method === "POST" && url.pathname === "/api/dev/upload-image") {
-        return handleAssetUploadRequest(request, env);
+        return await handleAssetUploadRequest(request, env);
       }
 
       if (request.method === "GET" && url.pathname === "/api/dev/session") {
-        return handleDevSessionRequest(request, env);
+        return await handleDevSessionRequest(request, env);
       }
 
       if (request.method === "POST" && url.pathname === "/api/dev/login") {
-        return handleDevLoginRequest(request, env);
+        return await handleDevLoginRequest(request, env);
       }
 
       return new Response("Not found", { status: 404 });

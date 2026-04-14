@@ -152,64 +152,9 @@ begin
 end;
 $$;
 
-create or replace function public.delete_work_entry_storage_asset(asset_url text, expected_bucket text default 'work-images')
-returns void
-language plpgsql
-security definer
-set search_path = public, storage
-as $$
-declare
-  object_name text;
-begin
-  object_name := public.storage_object_name_from_public_url(asset_url, expected_bucket);
-
-  if object_name is null then
-    return;
-  end if;
-
-  delete from storage.objects
-  where bucket_id = expected_bucket
-    and name = object_name;
-end;
-$$;
-
-create or replace function public.cleanup_work_entry_storage_assets()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, storage
-as $$
-begin
-  if tg_op = 'DELETE' then
-    perform public.delete_work_entry_storage_asset(old.image_url);
-    perform public.delete_work_entry_storage_asset(old.audio_url);
-    return old;
-  end if;
-
-  if new.image_url is distinct from old.image_url then
-    perform public.delete_work_entry_storage_asset(old.image_url);
-  end if;
-
-  if new.audio_url is distinct from old.audio_url then
-    perform public.delete_work_entry_storage_asset(old.audio_url);
-  end if;
-
-  return new;
-end;
-$$;
-
 drop trigger if exists trg_cleanup_work_entry_storage_assets on public.work_entries;
+drop function if exists public.cleanup_work_entry_storage_assets();
+drop function if exists public.delete_work_entry_storage_asset(text, text);
 
-create trigger trg_cleanup_work_entry_storage_assets
-after update or delete on public.work_entries
-for each row
-execute function public.cleanup_work_entry_storage_assets();
-
-delete from storage.objects as so
-where so.bucket_id = 'work-images'
-  and not exists (
-    select 1
-    from public.work_entries we
-    where public.storage_object_name_from_public_url(we.image_url) = so.name
-       or public.storage_object_name_from_public_url(we.audio_url) = so.name
-  );
+-- Supabase Storage objects must be deleted via the Storage API, not direct SQL.
+-- Keep storage cleanup in server-side code instead of database triggers.
