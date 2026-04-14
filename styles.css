@@ -2109,11 +2109,10 @@ body.play-startup-intro .app-shell {
   place-items: center;
   max-width: min(92vw, 1200px);
   max-height: min(90vh, 920px);
-  border-radius: 30px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 177, 103, 0.34);
-  box-shadow: 0 28px 60px rgba(16, 6, 2, 0.42);
-  background: rgba(255, 248, 238, 0.82);
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .image-preview-dialog__stage {
@@ -2121,9 +2120,9 @@ body.play-startup-intro .app-shell {
   place-items: center;
   max-width: min(92vw, 1200px);
   max-height: min(90vh, 920px);
-  min-width: min(58vw, 420px);
-  min-height: min(58vh, 320px);
-  padding: 18px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
 }
 
 .image-preview-dialog__image {
@@ -2133,8 +2132,8 @@ body.play-startup-intro .app-shell {
   width: auto;
   height: auto;
   object-fit: contain;
-  border-radius: 22px;
-  box-shadow: 0 18px 36px rgba(52, 18, 4, 0.2);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .image-preview-dialog.is-loading::after,
@@ -2205,9 +2204,9 @@ body.play-startup-intro .app-shell {
   }
 
   .image-preview-dialog__stage {
-    min-width: min(84vw, 420px);
-    min-height: min(48vh, 260px);
-    padding: 14px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
   }
 }
 
