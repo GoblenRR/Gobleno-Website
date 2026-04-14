@@ -1517,7 +1517,336 @@
   enhanceImages(document);
 
   const sparkLayer = document.querySelector("[data-click-spark-layer]");
+  const shapeGridCanvas = document.querySelector("[data-shape-grid]");
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const initializeShapeGrid = (canvas, options = {}) => {
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    const direction = String(options.direction || "diagonal");
+    const speed = Math.max(Number(options.speed || 0.6), 0.1);
+    const borderColor = String(options.borderColor || "#271E37");
+    const hoverFillColor = String(options.hoverFillColor || "#222222");
+    const squareSize = Math.max(Number(options.squareSize || 40), 12);
+    const shape = String(options.shape || "square");
+    const hoverTrailAmount = Math.max(Number(options.hoverTrailAmount || 0), 0);
+    const interactive = options.interactive !== false;
+    const isHex = shape === "hexagon";
+    const isTriangle = shape === "triangle";
+    const isCircle = shape === "circle";
+    const hexHorizontal = squareSize * 1.5;
+    const hexVertical = squareSize * Math.sqrt(3);
+    const gridOffset = { x: 0, y: 0 };
+    const hoveredCell = { current: null };
+    const trailCells = [];
+    const cellOpacities = new Map();
+    let rafId = 0;
+    let canvasWidth = 0;
+    let canvasHeight = 0;
+    let pixelRatio = 1;
+    let pointerX = null;
+    let pointerY = null;
+
+    const resizeCanvas = () => {
+      const bounds = canvas.getBoundingClientRect();
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      canvasWidth = Math.max(1, Math.round(bounds.width));
+      canvasHeight = Math.max(1, Math.round(bounds.height));
+      canvas.width = Math.round(canvasWidth * pixelRatio);
+      canvas.height = Math.round(canvasHeight * pixelRatio);
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    };
+
+    const drawHex = (centerX, centerY, size) => {
+      context.beginPath();
+      for (let index = 0; index < 6; index += 1) {
+        const angle = (Math.PI / 3) * index;
+        const vertexX = centerX + size * Math.cos(angle);
+        const vertexY = centerY + size * Math.sin(angle);
+        if (index === 0) {
+          context.moveTo(vertexX, vertexY);
+        } else {
+          context.lineTo(vertexX, vertexY);
+        }
+      }
+      context.closePath();
+    };
+
+    const drawCircle = (centerX, centerY, size) => {
+      context.beginPath();
+      context.arc(centerX, centerY, size / 2, 0, Math.PI * 2);
+      context.closePath();
+    };
+
+    const drawTriangle = (centerX, centerY, size, flip) => {
+      context.beginPath();
+      if (flip) {
+        context.moveTo(centerX, centerY + size / 2);
+        context.lineTo(centerX + size / 2, centerY - size / 2);
+        context.lineTo(centerX - size / 2, centerY - size / 2);
+      } else {
+        context.moveTo(centerX, centerY - size / 2);
+        context.lineTo(centerX + size / 2, centerY + size / 2);
+        context.lineTo(centerX - size / 2, centerY + size / 2);
+      }
+      context.closePath();
+    };
+
+    const pushTrailCell = (cell) => {
+      if (!cell || hoverTrailAmount <= 0) return;
+      trailCells.unshift({ x: cell.x, y: cell.y });
+      if (trailCells.length > hoverTrailAmount) {
+        trailCells.length = hoverTrailAmount;
+      }
+    };
+
+    const updateHoveredCell = (nextX, nextY) => {
+      if (hoveredCell.current && hoveredCell.current.x === nextX && hoveredCell.current.y === nextY) {
+        return;
+      }
+
+      pushTrailCell(hoveredCell.current);
+      hoveredCell.current = { x: nextX, y: nextY };
+    };
+
+    const updatePointerCell = () => {
+      if (!interactive || pointerX === null || pointerY === null) {
+        return;
+      }
+
+      if (isHex) {
+        const columnShift = Math.floor(gridOffset.x / hexHorizontal);
+        const offsetX = ((gridOffset.x % hexHorizontal) + hexHorizontal) % hexHorizontal;
+        const offsetY = ((gridOffset.y % hexVertical) + hexVertical) % hexVertical;
+        const adjustedX = pointerX - offsetX;
+        const adjustedY = pointerY - offsetY;
+        const column = Math.round(adjustedX / hexHorizontal);
+        const rowOffset = (column + columnShift) % 2 !== 0 ? hexVertical / 2 : 0;
+        const row = Math.round((adjustedY - rowOffset) / hexVertical);
+        updateHoveredCell(column, row);
+        return;
+      }
+
+      if (isTriangle) {
+        const halfWidth = squareSize / 2;
+        const offsetX = ((gridOffset.x % halfWidth) + halfWidth) % halfWidth;
+        const offsetY = ((gridOffset.y % squareSize) + squareSize) % squareSize;
+        const adjustedX = pointerX - offsetX;
+        const adjustedY = pointerY - offsetY;
+        const column = Math.round(adjustedX / halfWidth);
+        const row = Math.floor(adjustedY / squareSize);
+        updateHoveredCell(column, row);
+        return;
+      }
+
+      const offsetX = ((gridOffset.x % squareSize) + squareSize) % squareSize;
+      const offsetY = ((gridOffset.y % squareSize) + squareSize) % squareSize;
+      const adjustedX = pointerX - offsetX;
+      const adjustedY = pointerY - offsetY;
+      const divider = squareSize;
+      const column = isCircle ? Math.round(adjustedX / divider) : Math.floor(adjustedX / divider);
+      const row = isCircle ? Math.round(adjustedY / divider) : Math.floor(adjustedY / divider);
+      updateHoveredCell(column, row);
+    };
+
+    const updateCellOpacities = () => {
+      const targets = new Map();
+
+      if (hoveredCell.current) {
+        targets.set(`${hoveredCell.current.x},${hoveredCell.current.y}`, 1);
+      }
+
+      if (hoverTrailAmount > 0) {
+        for (let index = 0; index < trailCells.length; index += 1) {
+          const trail = trailCells[index];
+          const key = `${trail.x},${trail.y}`;
+          if (!targets.has(key)) {
+            targets.set(key, (trailCells.length - index) / (trailCells.length + 1));
+          }
+        }
+      }
+
+      targets.forEach((_target, key) => {
+        if (!cellOpacities.has(key)) {
+          cellOpacities.set(key, 0);
+        }
+      });
+
+      Array.from(cellOpacities.entries()).forEach(([key, opacity]) => {
+        const targetOpacity = targets.get(key) || 0;
+        const nextOpacity = opacity + (targetOpacity - opacity) * 0.15;
+        if (nextOpacity < 0.005) {
+          cellOpacities.delete(key);
+        } else {
+          cellOpacities.set(key, nextOpacity);
+        }
+      });
+    };
+
+    const drawGrid = () => {
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+      context.lineWidth = 1;
+
+      if (isHex) {
+        const columnShift = Math.floor(gridOffset.x / hexHorizontal);
+        const offsetX = ((gridOffset.x % hexHorizontal) + hexHorizontal) % hexHorizontal;
+        const offsetY = ((gridOffset.y % hexVertical) + hexVertical) % hexVertical;
+        const columns = Math.ceil(canvasWidth / hexHorizontal) + 3;
+        const rows = Math.ceil(canvasHeight / hexVertical) + 3;
+
+        for (let column = -2; column < columns; column += 1) {
+          for (let row = -2; row < rows; row += 1) {
+            const centerX = column * hexHorizontal + offsetX;
+            const centerY = row * hexVertical + ((column + columnShift) % 2 !== 0 ? hexVertical / 2 : 0) + offsetY;
+            const alpha = cellOpacities.get(`${column},${row}`);
+
+            if (alpha) {
+              context.globalAlpha = alpha;
+              drawHex(centerX, centerY, squareSize);
+              context.fillStyle = hoverFillColor;
+              context.fill();
+              context.globalAlpha = 1;
+            }
+
+            drawHex(centerX, centerY, squareSize);
+            context.strokeStyle = borderColor;
+            context.stroke();
+          }
+        }
+      } else if (isTriangle) {
+        const halfWidth = squareSize / 2;
+        const columnShift = Math.floor(gridOffset.x / halfWidth);
+        const rowShift = Math.floor(gridOffset.y / squareSize);
+        const offsetX = ((gridOffset.x % halfWidth) + halfWidth) % halfWidth;
+        const offsetY = ((gridOffset.y % squareSize) + squareSize) % squareSize;
+        const columns = Math.ceil(canvasWidth / halfWidth) + 4;
+        const rows = Math.ceil(canvasHeight / squareSize) + 4;
+
+        for (let column = -2; column < columns; column += 1) {
+          for (let row = -2; row < rows; row += 1) {
+            const centerX = column * halfWidth + offsetX;
+            const centerY = row * squareSize + squareSize / 2 + offsetY;
+            const flip = ((column + columnShift + row + rowShift) % 2 + 2) % 2 !== 0;
+            const alpha = cellOpacities.get(`${column},${row}`);
+
+            if (alpha) {
+              context.globalAlpha = alpha;
+              drawTriangle(centerX, centerY, squareSize, flip);
+              context.fillStyle = hoverFillColor;
+              context.fill();
+              context.globalAlpha = 1;
+            }
+
+            drawTriangle(centerX, centerY, squareSize, flip);
+            context.strokeStyle = borderColor;
+            context.stroke();
+          }
+        }
+      } else if (isCircle) {
+        const offsetX = ((gridOffset.x % squareSize) + squareSize) % squareSize;
+        const offsetY = ((gridOffset.y % squareSize) + squareSize) % squareSize;
+        const columns = Math.ceil(canvasWidth / squareSize) + 3;
+        const rows = Math.ceil(canvasHeight / squareSize) + 3;
+
+        for (let column = -2; column < columns; column += 1) {
+          for (let row = -2; row < rows; row += 1) {
+            const centerX = column * squareSize + squareSize / 2 + offsetX;
+            const centerY = row * squareSize + squareSize / 2 + offsetY;
+            const alpha = cellOpacities.get(`${column},${row}`);
+
+            if (alpha) {
+              context.globalAlpha = alpha;
+              drawCircle(centerX, centerY, squareSize);
+              context.fillStyle = hoverFillColor;
+              context.fill();
+              context.globalAlpha = 1;
+            }
+
+            drawCircle(centerX, centerY, squareSize);
+            context.strokeStyle = borderColor;
+            context.stroke();
+          }
+        }
+      } else {
+        const offsetX = ((gridOffset.x % squareSize) + squareSize) % squareSize;
+        const offsetY = ((gridOffset.y % squareSize) + squareSize) % squareSize;
+        const columns = Math.ceil(canvasWidth / squareSize) + 3;
+        const rows = Math.ceil(canvasHeight / squareSize) + 3;
+
+        for (let column = -2; column < columns; column += 1) {
+          for (let row = -2; row < rows; row += 1) {
+            const startX = column * squareSize + offsetX;
+            const startY = row * squareSize + offsetY;
+            const alpha = cellOpacities.get(`${column},${row}`);
+
+            if (alpha) {
+              context.globalAlpha = alpha;
+              context.fillStyle = hoverFillColor;
+              context.fillRect(startX, startY, squareSize, squareSize);
+              context.globalAlpha = 1;
+            }
+
+            context.strokeStyle = borderColor;
+            context.strokeRect(startX, startY, squareSize, squareSize);
+          }
+        }
+      }
+    };
+
+    const animate = () => {
+      const wrapX = isHex ? hexHorizontal * 2 : squareSize;
+      const wrapY = isHex ? hexVertical : isTriangle ? squareSize * 2 : squareSize;
+
+      switch (direction) {
+        case "right":
+          gridOffset.x = (gridOffset.x - speed + wrapX) % wrapX;
+          break;
+        case "left":
+          gridOffset.x = (gridOffset.x + speed + wrapX) % wrapX;
+          break;
+        case "up":
+          gridOffset.y = (gridOffset.y + speed + wrapY) % wrapY;
+          break;
+        case "down":
+          gridOffset.y = (gridOffset.y - speed + wrapY) % wrapY;
+          break;
+        case "diagonal":
+          gridOffset.x = (gridOffset.x - speed + wrapX) % wrapX;
+          gridOffset.y = (gridOffset.y - speed + wrapY) % wrapY;
+          break;
+        default:
+          break;
+      }
+
+      updatePointerCell();
+      updateCellOpacities();
+      drawGrid();
+      rafId = window.requestAnimationFrame(animate);
+    };
+
+    const handlePointerMove = (event) => {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+    };
+
+    const handlePointerLeave = () => {
+      pushTrailCell(hoveredCell.current);
+      hoveredCell.current = null;
+      pointerX = null;
+      pointerY = null;
+    };
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    if (interactive) {
+      window.addEventListener("pointermove", handlePointerMove, { passive: true });
+      window.addEventListener("pointerleave", handlePointerLeave);
+    }
+    rafId = window.requestAnimationFrame(animate);
+  };
 
   if (sparkLayer && !prefersReducedMotion) {
     const sparkCount = 10;
@@ -1546,6 +1875,19 @@
     window.addEventListener("pointerdown", (event) => {
       spawnClickSparks(event.clientX, event.clientY);
     }, { passive: true });
+  }
+
+  if (shapeGridCanvas && !prefersReducedMotion) {
+    initializeShapeGrid(shapeGridCanvas, {
+      speed: 0.6,
+      squareSize: 40,
+      direction: "diagonal",
+      borderColor: "#ffffff",
+      hoverFillColor: "#222222",
+      shape: "square",
+      hoverTrailAmount: 0,
+      interactive: false
+    });
   }
 
   const countUpElements = Array.from(document.querySelectorAll("[data-count-up]"));
