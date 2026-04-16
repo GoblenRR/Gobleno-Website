@@ -465,6 +465,9 @@ body.play-startup-intro .app-shell {
 }
 
 .app-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 122px;
   min-height: 52px;
   padding: 12px 24px;
@@ -474,6 +477,7 @@ body.play-startup-intro .app-shell {
   font-size: 1.05rem;
   font-weight: 900;
   line-height: 1;
+  text-align: center;
   text-decoration: none;
   box-shadow: 0 2px 0 rgba(164, 105, 46, 0.14);
   border: 2px solid rgba(165, 104, 46, 0.22);
@@ -498,7 +502,8 @@ body.play-startup-intro .app-shell {
   border-color: rgba(255, 134, 42, 0.78);
   box-shadow:
     0 0 0 1px rgba(255, 222, 172, 0.8),
-    0 0 18px rgba(255, 124, 31, 0.24),
+    0 0 28px rgba(255, 124, 31, 0.34),
+    0 0 46px rgba(255, 154, 61, 0.16),
     0 4px 0 rgba(164, 105, 46, 0.16);
 }
 
@@ -516,7 +521,8 @@ body.play-startup-intro .app-shell {
 .app-tab--featured:focus-visible {
   box-shadow:
     0 0 0 1px rgba(255, 222, 172, 0.9),
-    0 0 22px rgba(255, 124, 31, 0.34),
+    0 0 34px rgba(255, 124, 31, 0.44),
+    0 0 54px rgba(255, 154, 61, 0.22),
     0 7px 18px rgba(173, 69, 16, 0.2);
 }
 
@@ -528,7 +534,8 @@ body.play-startup-intro .app-shell {
   border-color: rgba(255, 205, 140, 0.92);
   box-shadow:
     0 0 0 1px rgba(255, 232, 198, 0.92),
-    0 0 26px rgba(255, 118, 24, 0.42),
+    0 0 38px rgba(255, 118, 24, 0.58),
+    0 0 62px rgba(255, 176, 82, 0.28),
     0 8px 18px rgba(173, 69, 16, 0.28);
 }
 
@@ -566,7 +573,7 @@ body.play-startup-intro .app-shell {
 .home-intro {
   position: relative;
   display: grid;
-  gap: 18px;
+  gap: 20px;
   padding: 28px 30px;
   border-radius: 28px;
   background:
@@ -589,21 +596,10 @@ body.play-startup-intro .app-shell {
   pointer-events: none;
 }
 
-.home-intro__eyebrow,
 .home-intro__title,
-.home-intro__copy,
 .home-skill-chips {
   position: relative;
   z-index: 1;
-}
-
-.home-intro__eyebrow {
-  margin: 0;
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #b55a1d;
 }
 
 .home-intro__title {
@@ -613,15 +609,6 @@ body.play-startup-intro .app-shell {
   line-height: 0.98;
   font-weight: 400;
   color: #2f2219;
-}
-
-.home-intro__copy {
-  max-width: 54ch;
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.7;
-  color: #5e5042;
-  font-weight: 700;
 }
 
 .home-skill-chips {
@@ -902,7 +889,7 @@ body.play-startup-intro .app-shell {
 .home-actions {
   display: grid;
   gap: 10px;
-  width: min(100%, 178px);
+  width: min(100%, 240px);
   margin-inline: auto;
   justify-items: center;
 }
@@ -911,7 +898,9 @@ body.play-startup-intro .app-shell {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   min-height: 60px;
+  min-width: 220px;
   border-radius: 18px;
   font-size: 0.96rem;
   font-weight: 800;
@@ -1915,16 +1904,11 @@ body.play-startup-intro .app-shell {
 
   .home-intro {
     padding: 22px 18px;
-    gap: 16px;
+    gap: 18px;
   }
 
   .home-intro__title {
     font-size: clamp(1.9rem, 10vw, 2.5rem);
-  }
-
-  .home-intro__copy {
-    font-size: 0.95rem;
-    line-height: 1.6;
   }
 
   .home-skill-chips {
