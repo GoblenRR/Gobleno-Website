@@ -469,8 +469,8 @@ body.play-startup-intro .app-shell {
   align-items: center;
   justify-content: center;
   min-width: 122px;
-  min-height: 52px;
-  padding: 12px 24px;
+  height: 52px;
+  padding: 0 24px;
   border-radius: 14px;
   color: #6c6257;
   background: rgba(250, 236, 213, 0.92);
@@ -499,12 +499,29 @@ body.play-startup-intro .app-shell {
 
 .app-tab--featured {
   position: relative;
-  border-color: rgba(255, 134, 42, 0.78);
+  color: #6f5630;
+  border-color: rgba(255, 198, 92, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 243, 0.98), rgba(255, 239, 210, 0.96)),
+    rgba(255, 247, 232, 0.96);
   box-shadow:
-    0 0 0 1px rgba(255, 222, 172, 0.8),
-    0 0 28px rgba(255, 124, 31, 0.34),
-    0 0 46px rgba(255, 154, 61, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 0 0 1px rgba(255, 236, 180, 0.95),
+    0 0 20px rgba(255, 208, 102, 0.5),
+    0 0 42px rgba(255, 188, 70, 0.24),
     0 4px 0 rgba(164, 105, 46, 0.16);
+}
+
+.app-tab--featured::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 11px;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.36) 32%, rgba(255, 226, 155, 0.12) 58%, rgba(255, 255, 255, 0) 76%),
+    radial-gradient(circle at 78% 24%, rgba(255, 235, 170, 0.65), rgba(255, 235, 170, 0) 34%);
+  opacity: 0.95;
 }
 
 .app-tab--featured::after {
@@ -513,29 +530,35 @@ body.play-startup-intro .app-shell {
   inset: -5px;
   border-radius: 18px;
   pointer-events: none;
-  border: 1px solid rgba(255, 189, 120, 0.58);
-  opacity: 0.9;
+  border: 1px solid rgba(255, 220, 142, 0.88);
+  box-shadow:
+    0 0 0 1px rgba(255, 238, 191, 0.56),
+    0 0 18px rgba(255, 210, 110, 0.52);
+  opacity: 1;
 }
 
 .app-tab--featured:hover,
 .app-tab--featured:focus-visible {
+  color: #674d26;
   box-shadow:
-    0 0 0 1px rgba(255, 222, 172, 0.9),
-    0 0 34px rgba(255, 124, 31, 0.44),
-    0 0 54px rgba(255, 154, 61, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 0 0 1px rgba(255, 241, 203, 0.98),
+    0 0 28px rgba(255, 212, 110, 0.62),
+    0 0 56px rgba(255, 193, 76, 0.32),
     0 7px 18px rgba(173, 69, 16, 0.2);
 }
 
 .app-tab--featured.is-active {
-  color: #fff8ef;
+  color: #5f4317;
   background:
-    radial-gradient(circle at top, rgba(255, 202, 136, 0.28), rgba(255, 202, 136, 0) 54%),
-    linear-gradient(180deg, #ff6d26 0%, #d94d17 100%);
-  border-color: rgba(255, 205, 140, 0.92);
+    radial-gradient(circle at top, rgba(255, 248, 214, 0.64), rgba(255, 248, 214, 0) 58%),
+    linear-gradient(180deg, #fff6dd 0%, #ffe39d 45%, #ffd16b 100%);
+  border-color: rgba(255, 224, 138, 0.98);
   box-shadow:
-    0 0 0 1px rgba(255, 232, 198, 0.92),
-    0 0 38px rgba(255, 118, 24, 0.58),
-    0 0 62px rgba(255, 176, 82, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 0 0 1px rgba(255, 245, 210, 0.98),
+    0 0 32px rgba(255, 217, 122, 0.72),
+    0 0 68px rgba(255, 197, 70, 0.42),
     0 8px 18px rgba(173, 69, 16, 0.28);
 }
 
@@ -1832,8 +1855,8 @@ body.play-startup-intro .app-shell {
 
   .app-tab {
     min-width: 108px;
-    min-height: 48px;
-    padding: 11px 18px;
+    height: 48px;
+    padding: 0 18px;
     font-size: 1rem;
   }
 
@@ -1878,8 +1901,8 @@ body.play-startup-intro .app-shell {
 
   .app-tab {
     min-width: 0;
-    min-height: 44px;
-    padding: 10px 16px;
+    height: 44px;
+    padding: 0 16px;
     font-size: 0.95rem;
     border-radius: 12px;
   }
