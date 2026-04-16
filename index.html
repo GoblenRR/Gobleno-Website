@@ -52,7 +52,7 @@
       <nav class="app-tabs" aria-label="Primary navigation">
         <a class="app-tab" href="#home" data-route-link="home" data-tab-for="home">Home</a>
         <a class="app-tab" href="#links" data-route-link="links" data-tab-for="links">Links</a>
-        <a class="app-tab" href="#my-work" data-route-link="my-work" data-tab-for="my-work">My Work</a>
+        <a class="app-tab app-tab--featured" href="#my-work" data-route-link="my-work" data-tab-for="my-work">My Work</a>
         <a class="app-tab" href="#contact" data-route-link="contact" data-tab-for="contact">Contact</a>
       </nav>
 
@@ -64,6 +64,24 @@
           aria-hidden="false"
         >
           <div class="home-grid">
+            <section class="home-intro" aria-labelledby="home-intro-title">
+              <p class="home-intro__eyebrow">Creative work, technical craft</p>
+              <h2 class="home-intro__title" id="home-intro-title">Heya, I&apos;m Gobleno and I do</h2>
+              <p class="home-intro__copy">
+                a mix of design, engineering, media, and game creation. I like building things that look sharp, work well, and feel fun to interact with.
+              </p>
+              <div class="home-skill-chips" aria-label="Gobleno skills">
+                <span class="home-skill-chip">Audio work</span>
+                <span class="home-skill-chip">UI/UX design</span>
+                <span class="home-skill-chip">Computing / technical skills</span>
+                <span class="home-skill-chip">3D modelling</span>
+                <span class="home-skill-chip">Video production</span>
+                <span class="home-skill-chip">Digital engineering</span>
+                <span class="home-skill-chip">Game development (Rec Room &amp; Unity)</span>
+                <span class="home-skill-chip">Collaboration on creative projects</span>
+              </div>
+            </section>
+
             <aside class="discord-spotlight">
               <div class="profile-card" data-depth-card>
                 <div class="profile-card__shine"></div>
@@ -189,7 +207,7 @@
         >
           <div class="panel-heading">
             <div class="panel-heading__row">
-              <h2 class="panel-title">My Work</h2>
+              <h2 class="panel-title panel-title--featured">My Work</h2>
               <label class="work-audio-control" data-topbar-audio-control hidden aria-label="Audio volume">
                 <span class="work-audio-control__badge" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false">
