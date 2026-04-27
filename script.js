@@ -1532,7 +1532,7 @@
 
   function bindUiSounds(root = document) {
     if (!uiSoundsEnabled) return;
-    const hoverTargets = Array.from(root.querySelectorAll(".app-tab, .action-button, .social-card, .back-mark, .work-category-card, .dev-control-button, .dev-submit-button, .dev-entry-list__edit, .dev-entry-list__delete, .audio-entry__toggle"));
+    const hoverTargets = Array.from(root.querySelectorAll(".app-tab, .action-button, .social-card, .work-category-card, .dev-control-button, .dev-submit-button, .dev-entry-list__edit, .dev-entry-list__delete, .audio-entry__toggle"));
 
     hoverTargets.forEach((target) => {
       if (!(target instanceof HTMLElement) || target.dataset.uiSoundBound === "true") return;
@@ -1958,87 +1958,6 @@
       hoverTrailAmount: 0,
       interactive: false
     });
-  }
-
-  const countUpElements = Array.from(document.querySelectorAll("[data-count-up]"));
-
-  if (countUpElements.length) {
-    const animateCountUp = (element, targetValue) => {
-      if (element.dataset.countAnimated === "true") return;
-
-      const duration = Number(element.dataset.countDuration || "1200");
-
-      if (!Number.isFinite(targetValue)) return;
-
-      const startTime = performance.now();
-      const startValue = 0;
-
-      element.dataset.countAnimated = "true";
-
-      const step = (now) => {
-        const progress = Math.min(1, (now - startTime) / duration);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const nextValue = Math.round(startValue + (targetValue - startValue) * eased);
-
-        element.textContent = nextValue.toLocaleString();
-
-        if (progress < 1) {
-          window.requestAnimationFrame(step);
-        }
-      };
-
-      window.requestAnimationFrame(step);
-    };
-
-    const prepareCountTargets = async () => {
-      await Promise.all(countUpElements.map(async (element) => {
-        const endpoint = String(element.dataset.countapiUrl || "").trim();
-        if (!endpoint) return;
-
-        try {
-          const response = await fetch(endpoint, { cache: "no-store" });
-          if (!response.ok) {
-            throw new Error(`countapi_failed:${response.status}`);
-          }
-
-          const payload = await response.json();
-          const value = Number(payload?.value);
-          if (!Number.isFinite(value)) {
-            throw new Error("countapi_invalid_value");
-          }
-
-          element.dataset.countTarget = String(value);
-          element.textContent = "0";
-        } catch (_error) {
-          element.dataset.countAnimated = "true";
-          element.textContent = "--";
-        }
-      }));
-    };
-
-    const startCountAnimations = () => {
-      if ("IntersectionObserver" in window) {
-        const countObserver = new IntersectionObserver((entries, observer) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            const element = entry.target;
-            const targetValue = Number((element.dataset.countTarget || element.textContent || "0").replace(/,/g, ""));
-            animateCountUp(element, targetValue);
-            observer.unobserve(entry.target);
-          });
-        }, { threshold: 0.35 });
-
-        countUpElements.forEach((element) => countObserver.observe(element));
-        return;
-      }
-
-      countUpElements.forEach((element) => {
-        const targetValue = Number((element.dataset.countTarget || element.textContent || "0").replace(/,/g, ""));
-        animateCountUp(element, targetValue);
-      });
-    };
-
-    prepareCountTargets().finally(startCountAnimations);
   }
 
   const depthCards = Array.from(document.querySelectorAll("[data-depth-card]"));

@@ -18,8 +18,6 @@ const ALLOWED_AUDIO_MIME_TYPES = new Set([
   "audio/ogg",
   "application/ogg"
 ]);
-const BOT_USER_AGENT_PATTERN = /(bot|crawler|spider|slurp|bingpreview|headlesschrome|facebookexternalhit|python-requests|curl\/|wget\/|go-http-client|node-fetch|axios|okhttp|postmanruntime)/i;
-const PAGE_VIEW_DEDUPE_WINDOW_MS = 30 * 60 * 1000;
 
 const encoder = new TextEncoder();
 
@@ -62,13 +60,6 @@ function jsonResponse(request, payload, options = {}) {
       ...headers
     }
   });
-}
-
-async function sha256Hex(value) {
-  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(String(value || "")));
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 async function fetchJson(url) {
@@ -569,171 +560,6 @@ async function handleVideosRequest(request, env) {
   });
 }
 
-async function getSiteMetricRow(env, metricKey) {
-  const rows = await supabaseRequest(
-    env,
-    `site_metrics?metric_key=eq.${encodeURIComponent(metricKey)}&select=metric_key,metric_value,updated_at`,
-    {
-      method: "GET",
-      headers: {
-        Prefer: "count=exact"
-      }
-    }
-  );
-
-  return Array.isArray(rows) ? rows[0] || null : null;
-}
-
-async function createSiteMetricRow(env, metricKey, metricValue) {
-  const rows = await supabaseRequest(env, "site_metrics", {
-    method: "POST",
-    headers: {
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      metric_key: metricKey,
-      metric_value: metricValue
-    })
-  });
-
-  return Array.isArray(rows) ? rows[0] || null : null;
-}
-
-async function compareAndSwapSiteMetric(env, metricKey, currentValue, nextValue) {
-  const rows = await supabaseRequest(
-    env,
-    `site_metrics?metric_key=eq.${encodeURIComponent(metricKey)}&metric_value=eq.${encodeURIComponent(String(currentValue))}&select=metric_key,metric_value,updated_at`,
-    {
-      method: "PATCH",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify({
-        metric_value: nextValue
-      })
-    }
-  );
-
-  return Array.isArray(rows) ? rows[0] || null : null;
-}
-
-async function incrementSiteMetricWithoutRpc(env, metricKey) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const currentRow = await getSiteMetricRow(env, metricKey);
-
-    if (!currentRow) {
-      try {
-        const createdRow = await createSiteMetricRow(env, metricKey, 1);
-        if (createdRow) {
-          return createdRow;
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error || "");
-        if (!message.includes("supabase_request_failed:409")) {
-          throw error;
-        }
-      }
-
-      continue;
-    }
-
-    const currentValue = Number(currentRow.metric_value || 0);
-    const nextValue = currentValue + 1;
-    const updatedRow = await compareAndSwapSiteMetric(env, metricKey, currentValue, nextValue);
-
-    if (updatedRow) {
-      return updatedRow;
-    }
-  }
-
-  throw new Error("site_metric_update_conflict");
-}
-
-function shouldSkipPageViewIncrement(request) {
-  const verifiedBotCategory = String(request.cf?.verifiedBotCategory || "").trim();
-  if (verifiedBotCategory) {
-    return true;
-  }
-
-  const userAgent = String(request.headers.get("user-agent") || "").trim();
-  return BOT_USER_AGENT_PATTERN.test(userAgent);
-}
-
-async function getPageViewFingerprint(request) {
-  const ipAddress = String(
-    request.headers.get("cf-connecting-ip")
-    || request.headers.get("x-real-ip")
-    || ""
-  ).trim();
-  const userAgent = String(request.headers.get("user-agent") || "").trim().toLowerCase();
-  return sha256Hex(`${ipAddress}|${userAgent}`);
-}
-
-async function shouldCountPageView(env, request, nowMs) {
-  const fingerprint = await getPageViewFingerprint(request);
-  const visitorMetricKey = `page_view_visitor:${fingerprint}`;
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const currentRow = await getSiteMetricRow(env, visitorMetricKey);
-
-    if (!currentRow) {
-      try {
-        const createdRow = await createSiteMetricRow(env, visitorMetricKey, nowMs);
-        if (createdRow) {
-          return true;
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error || "");
-        if (!message.includes("supabase_request_failed:409")) {
-          throw error;
-        }
-      }
-
-      continue;
-    }
-
-    const lastSeenMs = Number(currentRow.metric_value || 0);
-    if (Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < PAGE_VIEW_DEDUPE_WINDOW_MS) {
-      return false;
-    }
-
-    const updatedRow = await compareAndSwapSiteMetric(env, visitorMetricKey, lastSeenMs, nowMs);
-    if (updatedRow) {
-      return true;
-    }
-  }
-
-  throw new Error("page_view_dedupe_conflict");
-}
-
-async function handlePageViewsRequest(request, env) {
-  if (shouldSkipPageViewIncrement(request)) {
-    const row = await getSiteMetricRow(env, "page_views");
-    const value = Number(row?.metric_value || 0);
-
-    return jsonResponse(request, {
-      value: Number.isFinite(value) ? value : 0,
-      counted: false
-    }, {
-      cacheControl: "no-store"
-    });
-  }
-
-  const counted = await shouldCountPageView(env, request, Date.now());
-  const row = counted
-    ? await incrementSiteMetricWithoutRpc(env, "page_views")
-    : await getSiteMetricRow(env, "page_views");
-  const value = Number(row?.metric_value);
-
-  if (!Number.isFinite(value)) {
-    throw new Error("page_views_invalid_value");
-  }
-
-  return jsonResponse(request, { value, counted }, {
-    cacheControl: "no-store"
-  });
-}
-
 async function handleWorkContentGet(request, env) {
   const url = new URL(request.url);
   const section = String(url.searchParams.get("section") || "").trim().toLowerCase();
@@ -933,10 +759,6 @@ export default {
     }
 
     try {
-      if (request.method === "GET" && url.pathname === "/api/page-views") {
-        return await handlePageViewsRequest(request, env);
-      }
-
       if (request.method === "GET" && url.pathname === "/api/videos") {
         return await handleVideosRequest(request, env);
       }
